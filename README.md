@@ -11,6 +11,8 @@ An AI-powered web app that turns your favorite YouTube video tutorials into orga
 - PostgreSQL
 - Docker
 - Tailwind CSS
+- OpenAI
+- AssemblyAI
 
 ---
 
@@ -29,6 +31,9 @@ An AI-powered web app that turns your favorite YouTube video tutorials into orga
 - **Working with Django**  
   I learned how to work with the Django framework and its quick-to-develop qualities, like a built-in authentication system.
 
+- **API-Chain Pipeline**
+  Learned how to chain API outputs into inputs by feeding AssemblyAI transcripts into OpenAI to produce clean, structured notes.
+  
 - **Tailwind CSS**  
   I worked on adding some styling using Tailwind CSS instead of just using normal CSS.
 
