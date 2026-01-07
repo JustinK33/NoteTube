@@ -1,0 +1,6 @@
+django
+psycopg[binary]
+dotenv
+pytubefix
+assemblyai
+openai

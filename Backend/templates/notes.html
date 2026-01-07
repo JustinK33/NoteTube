@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoteTube Posts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans antialised">
+    <!-- Navbar -->
+    <nav class="bg-blue-600 p-4 text-white flex justify-between">
+        <div>
+            <h1 class="text-3xl font-bold">NoteTube</h1>
+        </div>
+        <div>
+            <a href="/" class="text-white hover:underline">Welcome {{user.username}}</a>
+            <a href="/note-list" class="text-white hover:underline mx-4">Saved Notes</a>
+            <a href="logout" class="text-white hover:underline">Logout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto mt-10 px-4 sm:px-0">
+        <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-md">
+            <!-- note post section -->
+            <section>
+                <h2 class="text-xl font-semibold mb-4">Your NoteTube Notes</h2>
+                <div class="space-y-4">
+
+                    {% for post in notetube_post %}
+                    <a href="note-details/{{post.id}}">
+                        <div class="border border-gray-300 p-4 rounded">
+                            <h3 class="text-lg font-semibold">{{ post.youtube_title }}</h3>
+                            <p>{{ post.generated_content|truncatechars:80 }}</p>
+                        </div>
+                    </a>
+                    {% endfor %}
+
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <footer class="text-center p-4 text-black mt-6">
+        Powered by <a href="https://github.com/JustinK33">Justin Kong</a>
+    </footer>
+    
+</body>
+</html>

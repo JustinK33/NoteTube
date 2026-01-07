@@ -1,0 +1,46 @@
+# === Python ===
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.cache/
+
+# === Virtual env ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Environment / secrets ===
+.env
+.env.*
+*.pem
+*.key
+
+# === Django ===
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+
+# === Build / packaging ===
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# === OS / editor ===
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# === Docker (optional local overrides) ===
+docker-compose.override.yml
+
+django.txt
