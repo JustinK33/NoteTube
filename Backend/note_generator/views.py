@@ -11,6 +11,8 @@ from pytubefix import YouTube
 import assemblyai as aai
 import openai
 from .models import NotePost
+import traceback
+import tempfile
 
 def home(request):
     return render(request, 'home.html')
@@ -46,7 +48,7 @@ def generate_note(request):
             user=request.user,
             youtube_title=title,
             youtube_link=yt_link,
-            generate_content=note_content
+            generated_content=note_content
         )
         new_note.save()
 
@@ -72,16 +74,19 @@ def yt_title(link):
     title = yt.title
     return title
 
-def download_audio(link):
+def download_audio(link): # made this download temp only for transcription then delete
     yt = YouTube(link)
     video = yt.streams.filter(only_audio=True).first()
     if video is None:
         raise ValueError("No audio stream found for this video.")
+    
     #im using pytubefix instead of pytube because of some bugs
-    out_file = video.download(output_path=settings.MEDIA_ROOT)
-    base, ext = os.path.splitext(out_file) # type: ignore
+    out_file = tempfile.gettempdir()
+    downloaded_path = video.download(output_path=out_file)
+
+    base, ext = os.path.splitext(downloaded_path) # type: ignore
     new_file = base + '.mp3'
-    os.rename(out_file, new_file) # type: ignore
+    os.rename(downloaded_path, new_file) # type: ignore
     return new_file
 
 # we gon use assembly ai to get the transcription
@@ -97,51 +102,60 @@ def get_transcript(link):
 def generate_blog_from_transcription(transcription):
     openai.api_key = os.getenv('OPENAI_API_KEY')
 
-    prompt = f"""You are a meticulous note-taking assistant. I will paste a YouTube video transcript. 
-Your job is to turn it into a high-quality STUDY SHEET (not just a summary).
+    prompt = f"""You are a strict transcript-based note writer.
 
-RULES
-- Use ONLY information that appears in the transcript. If something is unclear or missing, write: [UNCLEAR IN TRANSCRIPT] and list what’s missing.
-- Preserve key terms, definitions, steps, formulas, and examples exactly as intended.
-- Write for a student who wants to learn + review quickly for a quiz/exam.
-- Prefer clarity and structure over being short.
+I will paste a YouTube transcript. Create clean, exam-ready notes using ONLY what appears in the transcript.
+If something is missing or unclear, write: [UNCLEAR IN TRANSCRIPT: ...]. Do not add outside facts.
 
-OUTPUT FORMAT (use these sections in this order)
+FORMATTING RULES (STRICT)
+- Output must be PLAIN TEXT only.
+- Do NOT use Markdown at all (no **bold**, no tables, no code fences).
+- Use the exact indentation and bullet styles shown below.
+- Put a blank line between sections.
+- Wrap long lines naturally (don’t make one giant paragraph).
 
-1) Video at a Glance (5–10 bullets)
-- The main learning goals and what you should be able to do after watching.
+BULLET STYLE
+- Use "-" for bullets.
+- Use two spaces before sub-bullets.
+Example:
+- Main bullet
+  - Sub bullet
 
-2) Key Concepts & Definitions
-- A table with: Term | Definition (plain English) | Why it matters | Common confusion/mistake (if mentioned or implied).
+OUTPUT FORMAT (exact headings + structure)
 
-3) Big Ideas Explained
-- Short explanations (3–6 sentences each) of the most important ideas.
-- Include “why” reasoning and intuition, not just what it is.
+TL;DR
+- (5 bullets)
 
-4) Step-by-Step Processes / Workflows
-- If the transcript describes any procedure, algorithm, or method: convert it to numbered steps.
-- Add “When to use this” and “How to check you did it right”.
+KEY TERMS
+- Term: definition.
+  - Common mistake: ... (only if implied in transcript)
 
-5) Examples Walkthroughs
-- Extract every example from the transcript and rewrite it cleanly.
-- For each example: Problem/Prompt → Steps → Final result → Common mistake.
+HOW IT WORKS
+- (3–6 bullets)
 
-6) Cheat Sheet
-- Key formulas, rules, or patterns in a compact list.
-- If there are no formulas, list “If you see X → do Y” rules.
+STEP-BY-STEP
+1) ...
+2) ...
+(If none, write exactly: None found in transcript.)
 
-7) Quick Self-Quiz (with answers)
-- 10–15 questions: mix of definitions, “explain why”, apply-the-steps, and a couple of trick questions based on common mistakes.
-- Provide answers immediately below each question.
+QUICK CHECK QUIZ (with answers)
+Q1) Question?
+A1) Answer.
 
-8) Transcript Anchors
-- Provide 8–15 direct “anchor points” so I can find things again.
-- Format: [Approx section / quote snippet] → what it teaches (keep quote snippets short).
+Q2) Question?
+A2) Answer.
+(8–10 total)
 
-Now wait for me to paste the transcript:\n\n{transcription}\n\nNotes:"""
+ANCHORS
+- "short quote snippet" -> what it teaches
+(6–10 total)
+
+Now wait. Here is the transcript:
+{transcription}
+"""
 
     response = openai.completions.create(
-        model="gpt-5-mini",
+        model="gpt-4.1-nano",
         prompt=prompt,
         max_tokens=1000
     )
@@ -170,19 +184,28 @@ def user_signup(request):
         password = request.POST['password']
         repeatPassword = request.POST['repeatPassword']
 
-        if password == repeatPassword:
-            try:
-                user = User.objects.create_user(username, email, password)
-                user.save()
-                login(request, user)
-                return redirect('login')
-            except:
-                messages.error(request, 'Error creating account')
-                return redirect('signup')
-
-        else:
+        if password != repeatPassword:
             messages.error(request, "Passwords do not match")
-            return redirect('signup')
+            return redirect("signup")
+        # !! keep things seperated too much in one try: broke the signup keep the logic seperate
+        try:
+            user = User.objects.create_user(username, email, password)
+            user.save()
+        except Exception as e:
+            traceback.print_exc()
+            messages.error(request, f"Error creating account: {e}")
+            return redirect("signup")
+    
+        # fixed the issue of login() breaking down bc multiple authications so it was confused
+        auth_user = authenticate(request, username=username, password=password)
+        if auth_user is None:
+            messages.info(request, "Account created. Please log in.")
+            return redirect("login")
+        
+        login(request, auth_user)
+
+        return redirect("/")
+
         
     return render(request, 'signup.html')
 

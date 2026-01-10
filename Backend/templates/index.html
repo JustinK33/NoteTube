@@ -90,7 +90,7 @@
         <section class="mt-10">
           <h2 class="text-xl mb-4 font-semibold text-white/90">Generated AI Notes</h2>
 
-          <div id="blogContent" class="rounded-2xl border border-white/10 bg-black/20 p-5 text-white/80 space-y-4 min-h-[140px]">
+          <div id="blogContent" class="whitespace-pre-wrap rounded-2xl border border-white/10 bg-black/20 p-5 text-white/80 space-y-4 min-h-[140px]">
             <p class="text-white/45 text-sm">Your notes will appear here.</p>
           </div>
         </section>
@@ -108,7 +108,7 @@
 
         blogContent.innerHTML = ''; // Clear previous content
 
-        const endpointUrl = '/generate-blog';
+        const endpointUrl = '/generate-notes';
 
         try {
           const response = await fetch(endpointUrl, {

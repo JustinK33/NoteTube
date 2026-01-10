@@ -24,7 +24,7 @@
           <div class="h-9 w-9 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center overflow-hidden">
             <img src="{% static 'images/NoteTube-logo.png' %}?v=3" class="h-7 w-7" alt="NoteTube">
           </div>
-          <h1 class="text-xl font-semibold tracking-tight"><a href="/" class="hover:opacity-90">NoteTube</a></h1>
+          <h1 class="text-xl font-semibold tracking-tight"><a href="/index" class="hover:opacity-90">NoteTube</a></h1>
         </div>
 
         <div class="flex items-center gap-4 text-sm text-white/75">
@@ -47,7 +47,9 @@
 
         <div class="mt-6 space-y-4">
           {% for post in notetube_post %}
-          <a href="note-details/{{post.id}}" class="block">
+          <!-- <a href="note-details/{{ post.id }}/">  this was missing the trailing slash-->
+            <!-- it worked before because it prolly j saved the old link from the og account -->
+          <a href="{% url 'note-details' post.id %}" class="block">
             <div class="rounded-2xl border border-white/10 bg-black/20 p-5 hover:bg-white/5 transition-colors">
               <h3 class="text-lg font-semibold text-white/90">{{ post.youtube_title }}</h3>
               <p class="mt-2 text-sm text-white/65">{{ post.generated_content|truncatechars:120 }}</p>

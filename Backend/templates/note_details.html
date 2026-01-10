@@ -30,7 +30,8 @@
         <div class="flex items-center gap-4 text-sm text-white/75">
           <a href="/saved-notes" class="hover:text-white transition-colors">Saved Notes</a>
           <div class="h-4 w-px bg-white/10"></div>
-          <a href="logout" class="hover:text-white transition-colors">Logout</a>
+          <!-- j fixed the problem of logout bugging when i try to logout from a note-detail/# -->
+          <a href="{% url 'logout' %}" class="hover:text-white transition-colors">Logout</a>
         </div>
       </div>
     </div>

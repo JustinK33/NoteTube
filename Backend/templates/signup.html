@@ -16,7 +16,7 @@
 
       <div class="rounded-3xl border border-white/15 bg-[#12121a] p-8 shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
 
-        <form class="space-y-4" action="signup" method="POST">
+        <form class="space-y-4" action="" method="POST">
           {% csrf_token %}
 
           {% if messages %}
@@ -64,8 +64,7 @@
 
           <br>
 
-          <button type="submit"
-                  class="w-full bg-[#6d28ff] text-white p-2 rounded-xl hover:opacity-90 transition-opacity font-semibold">
+          <button type="submit" class="w-full bg-[#6d28ff] text-white p-2 rounded-xl hover:opacity-90 transition-opacity font-semibold">
             Create an account
           </button>
         </form>
