@@ -12,6 +12,12 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# print("ID:", os.getenv("GOOGLE_CLIENT_ID")) checking if my .env was loading correctly
+# print("SECRET exists:", bool(os.getenv("GOOGLE_CLIENT_SECRET")))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,20 +32,27 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["0.0.0.0"]
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
-    'django.contrib.auth',
+    'django.contrib.auth', # needed for oauth
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'django.contrib.messages',
+    'django.contrib.messages', # needed for oauth
     'django.contrib.staticfiles',
-    'note_generator' # i added this, this is important for migrations
+    'note_generator', # i added this, this is important for migrations
+    
+    'django.contrib.sites', # admin page
+    'allauth',
+    'allauth.account',
+    "allauth.socialaccount",
+    'allauth.socialaccount.providers.google', # using this for google oauth in admin page
 ]
+SITE_ID=1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -49,7 +62,25 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # Add the account middleware:
+    "allauth.account.middleware.AccountMiddleware",
 ]
+
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        # For each OAuth based provider, either add a ``SocialApp``
+        # (``socialaccount`` app) containing the required client
+        # credentials, or list them here:
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'key': '' # idk what ts is come back
+        }
+    }
+}
 
 ROOT_URLCONF = 'notetube.urls'
 
@@ -63,9 +94,24 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # 'allauth' needs this from django
+                'django.template.context_processors.request',
             ],
         },
     },
+]
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+# added this from allauth
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 WSGI_APPLICATION = 'notetube.wsgi.application'
@@ -75,9 +121,6 @@ WSGI_APPLICATION = 'notetube.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 from os import getenv
-from dotenv import load_dotenv
-
-load_dotenv()
 
 DATABASES = {
   'default': {
@@ -112,6 +155,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+LOGIN_REDIRECT_URL = "index" # when a user login happens they get sent back to the "/"
+LOGOUT_REDIRECT_URL = "index" # likewise if they logout 
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
@@ -134,3 +179,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 LOGIN_URL = 'login'
+
+# Allow configuring CSRF trusted origins for local/docker development.
+# Example: CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost:8000,http://127.0.0.1:8000,http://0.0.0.0:8000'
+).split(',')

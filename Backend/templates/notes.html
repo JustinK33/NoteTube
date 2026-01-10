@@ -1,49 +1,64 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NoteTube Posts</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saved Notes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="{% static 'images/NoteTube-logo.png' %}?v=3">
 </head>
-<body class="bg-gray-100 font-sans antialised">
-    <!-- Navbar -->
-    <nav class="bg-blue-600 p-4 text-white flex justify-between">
-        <div>
-            <h1 class="text-3xl font-bold">NoteTube</h1>
-        </div>
-        <div>
-            <a href="/" class="text-white hover:underline">Welcome {{user.username}}</a>
-            <a href="/note-list" class="text-white hover:underline mx-4">Saved Notes</a>
-            <a href="logout" class="text-white hover:underline">Logout</a>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="container mx-auto mt-10 px-4 sm:px-0">
-        <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-md">
-            <!-- note post section -->
-            <section>
-                <h2 class="text-xl font-semibold mb-4">Your NoteTube Notes</h2>
-                <div class="space-y-4">
+<body class="min-h-screen bg-[#0b0b10] text-white font-sans antialiased overflow-x-hidden">
 
-                    {% for post in notetube_post %}
-                    <a href="note-details/{{post.id}}">
-                        <div class="border border-gray-300 p-4 rounded">
-                            <h3 class="text-lg font-semibold">{{ post.youtube_title }}</h3>
-                            <p>{{ post.generated_content|truncatechars:80 }}</p>
-                        </div>
-                    </a>
-                    {% endfor %}
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-[radial-gradient(1200px_700px_at_80%_10%,rgba(109,40,255,0.30),transparent_60%),radial-gradient(900px_600px_at_20%_80%,rgba(58,130,255,0.18),transparent_60%),radial-gradient(900px_600px_at_10%_20%,rgba(210,60,255,0.12),transparent_60%),linear-gradient(180deg,#05050a_0%,#0b0b10_45%,#04040a_100%)]"></div>
+    <div class="absolute inset-0 opacity-[0.06] bg-[radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(1000px_700px_at_50%_40%,transparent_45%,rgba(0,0,0,0.65)_95%)]"></div>
+  </div>
 
-                </div>
-            </section>
+  <nav class="sticky top-4 z-20">
+    <div class="mx-auto max-w-6xl px-4">
+      <div class="flex items-center justify-between rounded-2xl border border-white/15 bg-black/30 px-4 py-3 shadow-2xl backdrop-blur-xl">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center overflow-hidden">
+            <img src="{% static 'images/NoteTube-logo.png' %}?v=3" class="h-7 w-7" alt="NoteTube">
+          </div>
+          <h1 class="text-xl font-semibold tracking-tight"><a href="/" class="hover:opacity-90">NoteTube</a></h1>
         </div>
+
+        <div class="flex items-center gap-4 text-sm text-white/75">
+          <div class="h-4 w-px bg-white/10"></div>
+          <a href="logout" class="hover:text-white transition-colors">Logout</a>
+        </div>
+      </div>
     </div>
+  </nav>
 
-    <footer class="text-center p-4 text-black mt-6">
-        Powered by <a href="https://github.com/JustinK33">Justin Kong</a>
-    </footer>
-    
+  <div class="mx-auto max-w-6xl px-4 py-10">
+    <div class="max-w-3xl mx-auto rounded-[2rem] border border-white/15 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+      <section>
+        <div class="flex items-end justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-semibold tracking-tight">Your NoteTube Notes</h2>
+            <p class="mt-1 text-sm text-white/55">Pick a note to view details.</p>
+          </div>
+        </div>
+
+        <div class="mt-6 space-y-4">
+          {% for post in notetube_post %}
+          <a href="note-details/{{post.id}}" class="block">
+            <div class="rounded-2xl border border-white/10 bg-black/20 p-5 hover:bg-white/5 transition-colors">
+              <h3 class="text-lg font-semibold text-white/90">{{ post.youtube_title }}</h3>
+              <p class="mt-2 text-sm text-white/65">{{ post.generated_content|truncatechars:120 }}</p>
+              <div class="mt-4 text-xs text-white/45">Open →</div>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </div>
+
 </body>
 </html>

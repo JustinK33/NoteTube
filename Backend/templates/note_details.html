@@ -1,40 +1,85 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Note Details</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Note Details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="{% static 'images/NoteTube-logo.png' %}?v=3">
 </head>
-<body class="font-sans bg-gray-100 antialised">
-    <nav class="bg-blue-600 p-4 text-white flex justify-between">
-        <div>
-            <h1 class="text-3xl font-bold">NoteTube</h1>
-        </div>
-        <div>
-            <a href="/" class="text-white hover:underline">Welcome {{user.username}}</a>
-            <a href="/note-list" class="text-white hover:underline mx-4">Saved Notes</a>
-            <a href="logout" class="text-white hover:underline">Logout</a>
-        </div>
-    </nav>
 
-    <!-- main content -->
-    <div class="container mx-auto mt-10 px-4 sm:px-0">
-        <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-md">
-            <!-- main content -->
-            <section>
-                <h2 class="font-semibold text-xl mb-4">Notes Post Details</h2>
-                <div class="border border-gray-300 shadow-md rounded-lg p-4">
-                    <h3 class="text-lg font-semibold">{{ note_post_detail.youtube_title }}</h3>
-                    <p class="text-gray-700">{{ note_post_detail.generated_content }}</p>
-                    <hr class="my-4 border-gray-300">
-                    <h4 class="text-lg font-semibold">YouTube Title</h4>
-                    <p class="text-gray-700">{{ note_post_detail.youtube_title }}</p>
-                    <h4 class="text-gray-700 text-lg font-semibold">YouTube Link</h4>
-                    <a href="{{ blog_article_detail.youtube_link }}" class="text-blue-600 hover:text-blue-700">{{ note_post_detail.youtube_link }}</a>
-                </div>
-            </section>
+<body class="min-h-screen bg-[#0b0b10] text-white font-sans antialiased overflow-x-hidden">
+
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-[radial-gradient(1200px_700px_at_80%_10%,rgba(109,40,255,0.30),transparent_60%),radial-gradient(900px_600px_at_20%_80%,rgba(58,130,255,0.18),transparent_60%),radial-gradient(900px_600px_at_10%_20%,rgba(210,60,255,0.12),transparent_60%),linear-gradient(180deg,#05050a_0%,#0b0b10_45%,#04040a_100%)]"></div>
+    <div class="absolute inset-0 opacity-[0.06] bg-[radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(1000px_700px_at_50%_40%,transparent_45%,rgba(0,0,0,0.65)_95%)]"></div>
+  </div>
+
+  <nav class="sticky top-4 z-20">
+    <div class="mx-auto max-w-6xl px-4">
+      <div class="flex items-center justify-between rounded-2xl border border-white/15 bg-black/30 px-4 py-3 shadow-2xl backdrop-blur-xl">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center overflow-hidden">
+            <img src="{% static 'images/NoteTube-logo.png' %}?v=3" class="h-7 w-7" alt="NoteTube">
+          </div>
+          <h1 class="text-xl font-semibold tracking-tight"><a href="/" class="hover:opacity-90">NoteTube</a></h1>
         </div>
-     </div>
+
+        <div class="flex items-center gap-4 text-sm text-white/75">
+          <a href="/saved-notes" class="hover:text-white transition-colors">Saved Notes</a>
+          <div class="h-4 w-px bg-white/10"></div>
+          <a href="logout" class="hover:text-white transition-colors">Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="mx-auto max-w-6xl px-4 py-10">
+    <div class="max-w-3xl mx-auto rounded-[2rem] border border-white/15 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+      <section>
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-semibold tracking-tight">Notes Post Details</h2>
+            <p class="mt-1 text-sm text-white/55">Review your generated notes and source video.</p>
+          </div>
+          <a href="/saved-notes"
+             class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 transition-colors">
+            Back to notes
+          </a>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-white/10 bg-black/20 p-5">
+          <h3 class="text-lg font-semibold text-white/90">{{ note_post_detail.youtube_title }}</h3>
+
+          <div class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p class="text-sm font-semibold text-white/85">Generated Notes</p>
+            <p class="mt-3 text-sm leading-relaxed text-white/70 whitespace-pre-wrap">
+              {{ note_post_detail.generated_content }}
+            </p>
+          </div>
+
+          <hr class="my-6 border-white/10">
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p class="text-sm font-semibold text-white/85">YouTube Title</p>
+              <p class="mt-2 text-sm text-white/70">{{ note_post_detail.youtube_title }}</p>
+            </div>
+
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p class="text-sm font-semibold text-white/85">YouTube Link</p>
+              <a href="{{ note_post_detail.youtube_link }}"
+                 class="mt-2 inline-block text-sm text-[#6d28ff] hover:opacity-90 break-all">
+                {{ note_post_detail.youtube_link }}
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
 </body>
 </html>

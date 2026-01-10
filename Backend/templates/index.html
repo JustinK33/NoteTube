@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,140 +6,134 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NoteTube</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="{% static 'images/NoteTube-logo.png' %}?v=3">
+
   <style>
-        @keyframes rotate {
-            from {
-                transform: rotate(0deg);
-            }
-            to { 
-                transform: rotate(360deg);
-            }
-        }
-         
-        
-         @-webkit-keyframes rotate {
-            from {
-                -webkit-transform: rotate(0deg);
-            }
-            to { 
-                -webkit-transform: rotate(360deg);
-            }
-        }
-        
-        .load {
-            width: 100px;
-            height: 100px;
-            margin: 110px auto 0;
-            border:solid 10px #8822aa;
-            border-radius: 50%;
-            border-right-color: transparent;
-            border-bottom-color: transparent;
-             -webkit-transition: all 0.5s ease-in;
-            -webkit-animation-name:             rotate; 
-            -webkit-animation-duration:         1.0s; 
-            -webkit-animation-iteration-count:  infinite;
-            -webkit-animation-timing-function: linear;
-                
-                 transition: all 0.5s ease-in;
-            animation-name:             rotate; 
-            animation-duration:         1.0s; 
-            animation-iteration-count:  infinite;
-            animation-timing-function: linear; 
-        }
-    </style>
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @-webkit-keyframes rotate {
+      from { -webkit-transform: rotate(0deg); }
+      to   { -webkit-transform: rotate(360deg); }
+    }
+
+    .load {
+      width: 72px;
+      height: 72px;
+      margin: 28px auto 0;
+      border: solid 8px rgba(255,255,255,0.18);
+      border-top-color: #6d28ff;
+      border-right-color: transparent;
+      border-bottom-color: transparent;
+      border-radius: 9999px;
+
+      -webkit-animation: rotate 1.0s linear infinite;
+      animation: rotate 1.0s linear infinite;
+    }
+  </style>
 </head>
-<body class="flex flex-col min-h-screen bg-gray-100 font-sans antialised">
-    <!-- Navbar -->
-    <nav class="bg-blue-600 p-4 text-white flex justify-between">
-        <div>
-            <h1 class="text-3xl font-bold">NoteTube</h1>
+
+<body class="min-h-screen bg-[#0b0b10] text-white font-sans antialiased overflow-x-hidden">
+
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-[radial-gradient(1200px_700px_at_80%_10%,rgba(109,40,255,0.30),transparent_60%),radial-gradient(900px_600px_at_20%_80%,rgba(58,130,255,0.18),transparent_60%),radial-gradient(900px_600px_at_10%_20%,rgba(210,60,255,0.12),transparent_60%),linear-gradient(180deg,#05050a_0%,#0b0b10_45%,#04040a_100%)]"></div>
+    <div class="absolute inset-0 opacity-[0.06] bg-[radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(1000px_700px_at_50%_40%,transparent_45%,rgba(0,0,0,0.65)_95%)]"></div>
+  </div>
+
+  <nav class="sticky top-4 z-20">
+    <div class="mx-auto max-w-6xl px-4">
+      <div class="flex items-center justify-between rounded-2xl border border-white/15 bg-black/30 px-4 py-3 shadow-2xl backdrop-blur-xl">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center overflow-hidden">
+            <img src="{% static 'images/NoteTube-logo.png' %}?v=3" class="h-7 w-7" alt="NoteTube">
+          </div>
+          <h1 class="text-xl font-semibold tracking-tight">
+            <a href="/" class="hover:opacity-90">NoteTube</a>
+          </h1>
         </div>
-        <div>
-            <a href="/" class="text-white hover:underline">Welcome {{user.username}}</a>
-            <a href="/note-list" class="text-white hover:underline mx-4">Saved Notes</a>
-            <a href="logout" class="text-white hover:underline">Logout</a>
+
+        <div class="flex items-center gap-4 text-sm text-white/75">
+          <a href="/saved-notes" class="hover:text-white transition-colors">Saved Notes</a>
+          <div class="h-4 w-px bg-white/10"></div>
+          <a href="logout" class="hover:text-white transition-colors">Logout</a>
         </div>
-    </nav>
-
-    <br>
-    <br>
-    <!-- Main -->
-    <div class="flex-grow container mx-auto mt-10 px-4 sm:px-0">
-        <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md transition-transform transform hover:scale-105 flex flex-col">
-
-            <!-- Introduction section -->
-            <div>
-                <h2 class="text-2xl font-semibold mb-4">Welcome to NoteTube</h2>
-                <p class="text-gray-700">
-                    Generate high-quality notes from YouTube videos using artifical intelligence.
-                    Simply enter the link to the YouTube video below and let the AI create the content for you!
-                </p>
-            </div>
-
-            <br>
-
-            <!-- Youtube section -->
-             <div>
-                <h2 class="text-xl font-semibold mb-4">Enter YouTube Video Link</h2>
-                <div class="flex space-x-4">
-                    <input id="youtubeLink" type="url" placeholder="Paste YouTube Link..." class="flex-grow p-2 border border-blue-400 rounded-l-md">
-                    <button id="generateBlogButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">Generate Blog</button>
-                </div>
-
-                <!-- section for loading circle -->
-                <div style="display:none;" id="loading-circle" class="load"></div>
-
-                <!-- Generated Note Display Section-->
-                <section class="mt-10 flex-grow">
-                    <h2 class="text-xl mb-4 font-semibold">Generated AI Notes</h2>
-                    <div id="blogContent" class="mt-2 text-gray-700 space-y-4">
-                    </div>
-                </section>
-             </div>
-        </div>
+      </div>
     </div>
+  </nav>
 
-    <footer class="text-center p-4 text-black mt-6">
-        Powered by <a href="https://github.com/JustinK33">Justin Kong</a>
-    </footer>
+  <div class="mx-auto max-w-6xl px-4 py-10">
+    <div class="max-w-3xl mx-auto rounded-[2rem] border border-white/15 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
 
-    <script>
-        document.getElementById('generateBlogButton').addEventListener('click', async () => {
-            
+      <div>
+        <h2 class="text-3xl font-semibold tracking-tight">Welcome to NoteTube</h2>
+        <p class="mt-3 text-white/70 leading-relaxed">
+          Generate high-quality notes from YouTube videos using artificial intelligence.
+          Simply enter the link to the YouTube video below and let the AI create the content for you!
+        </p>
+      </div>
 
-            const youtubeLink = document.getElementById('youtubeLink').value;
-            const blogContent = document.getElementById('blogContent');
-            
-            if(youtubeLink) {
-                document.getElementById('loading-circle').style.display = 'block';
-                
-                blogContent.innerHTML = ''; // Clear previous content
+      <div class="mt-8">
+        <h2 class="text-xl font-semibold mb-4 text-white/90">Enter YouTube Video Link</h2>
 
-                const endpointUrl = '/generate-blog';
-                
-                try {
-                    const response = await fetch(endpointUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ link: youtubeLink })
-                    });
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input id="youtubeLink" type="url" placeholder="Paste YouTube Link..." class="flex-grow w-full h-12 rounded-2xl bg-black/20 border border-white/15 px-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60"/>
 
-                    const data = await response.json();
+        <button id="generateBlogButton" class="h-12 shrink-0 rounded-2xl bg-[#6d28ff] px-6 font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
+            Generate Notes
+        </button>
+        </div>
 
-                    blogContent.innerHTML = data.content;
+        <div style="display:none;" id="loading-circle" class="load"></div>
 
-                } catch (error) {
-                    console.error("Error occurred:", error);
-                    alert("Something went wrong. Please try again later.");
-                    
-                }
-                document.getElementById('loading-circle').style.display = 'none';
-            } else {
-                alert("Please enter a YouTube link.");
-            }
-        });
-    </script>
+        <section class="mt-10">
+          <h2 class="text-xl mb-4 font-semibold text-white/90">Generated AI Notes</h2>
+
+          <div id="blogContent" class="rounded-2xl border border-white/10 bg-black/20 p-5 text-white/80 space-y-4 min-h-[140px]">
+            <p class="text-white/45 text-sm">Your notes will appear here.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('generateBlogButton').addEventListener('click', async () => {
+      const youtubeLink = document.getElementById('youtubeLink').value;
+      const blogContent = document.getElementById('blogContent');
+
+      if (youtubeLink) {
+        document.getElementById('loading-circle').style.display = 'block';
+
+        blogContent.innerHTML = ''; // Clear previous content
+
+        const endpointUrl = '/generate-blog';
+
+        try {
+          const response = await fetch(endpointUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ link: youtubeLink })
+          });
+
+          const data = await response.json();
+
+          blogContent.innerHTML = data.content;
+
+        } catch (error) {
+          console.error("Error occurred:", error);
+          alert("Something went wrong. Please try again later.");
+        }
+
+        document.getElementById('loading-circle').style.display = 'none';
+      } else {
+        alert("Please enter a YouTube link.");
+      }
+    });
+  </script>
+
 </body>
 </html>

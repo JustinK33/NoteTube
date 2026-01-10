@@ -1,52 +1,75 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoteTube - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="{% static 'images/NoteTube-logo.png' %}?v=3">
 </head>
-<body class="bg-gray-100 font-sans antialised">
-    <nav class="bg-blue-600 p-4 text-white flex justify-between">
-        <div>
-            <h1 class="text-3xl font-bold">NoteTube</h1>
-        </div>
-        <div>
-            <a href="login" class="text-white hover:underline">Login</a>
-            <a href="signup" class="text-white hover:underline">Signup</a>
-        </div>
-    </nav>
 
-    <!-- main content -->
-     <div class="flex items-center justify-center h-screen">
-        <div class="bg-white p-8 shadow-md rounded-lg max-w-md w-full">
-            <!-- Login form -->
-             <form class="space-y-4" action="" method="POST">
-                {% csrf_token %}
-
-                {% if error_message %}
-                    <div align="center" style="color: red">
-                        <h2>
-                            {{ error_message }}
-                        </h2>
-                    </div>
-                {% endif %}
-
-                <h2 class="text-xl font-semibold">Login</h2>
-                <div>
-                    <label for="username" class="block mb-1 font-medium">Username</label>
-                    <input type="text" id="username" name="username" placeholder="Enter your username..." class="w-full p-2 border border rounded">
-                </div>
-
-                <div>
-                    <label for="password" class="block mb-1 font-medium">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Enter your password..." class="w-full p-2 border border rounded">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Login</button>
-             </form>
-
-        </div>
-     </div>
+<body class="min-h-screen bg-[#0b0b10] text-white font-sans antialiased">
+  <div class="min-h-screen flex items-center justify-center px-4 py-16">
     
+    <div class="w-full max-w-md">
+
+      <div class="rounded-3xl border border-white/15 bg-[#12121a] p-8 shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
+
+        <form class="space-y-4" action="" method="POST">
+          {% csrf_token %}
+
+          {% if messages %}
+            <div class="space-y-2">
+              {% for message in messages %}
+                <div align="center" class="text-red-400 text-sm">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <input type="hidden" name="next" value="{{ request.GET.next }}">
+
+          <h2 class="text-4xl font-semibold">Login</h2>
+          <p class="text-sm mb-1 text-white/65">Create notes within minutes for $0.</p>
+
+          <a href="accounts/google/login/"
+             class="w-full bg-white/10 border border-white/15 flex items-center justify-center gap-3 text-white py-3 rounded-xl hover:bg-white/15 transition-colors">
+            <img src="{% static 'images/google-logo.png' %}" alt="Google" class="h-7 w-7" />
+            <span class="text-base font-medium">Continue with Google</span>
+          </a>
+
+          <hr class="border-white/10">
+
+          <div>
+            <label for="username" class="block mb-1 font-medium text-white/80">Username</label>
+            <input required type="text" id="username" name="username" placeholder="Enter your username..."
+                   class="w-full p-2 rounded-xl bg-[#0f0f16] border border-white/15 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60">
+          </div>
+
+          <div>
+            <label for="password" class="block mb-1 font-medium text-white/80">Password</label>
+            <input required type="password" id="password" name="password" placeholder="Enter your password..."
+                   class="w-full p-2 rounded-xl bg-[#0f0f16] border border-white/15 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60">
+          </div>
+
+          <button type="submit"
+                  class="w-full bg-[#6d28ff] text-white p-2 rounded-xl hover:opacity-90 transition-opacity font-semibold">
+            Login
+          </button>
+
+          <p class="text-center p-4 text-white/70 mt-6">
+            Don't have an account?
+            <a class="underline text-white hover:text-white/90" href="signup">Sign up</a>
+          </p>
+        </form>
+      </div>
+
+      <p class="mt-8 text-center text-sm text-white/40">
+        By creating or entering an account, you agree to the
+        <span class="text-[#6d28ff]">Terms of Service</span> and
+        <span class="text-[#6d28ff]">Privacy Policy</span>.
+      </p>
+    </div>
+  </div>
 </body>
 </html>

@@ -1,0 +1,169 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NoteTube - AI Note Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="{% static 'images/NoteTube-logo.png' %}?v=2">
+</head>
+
+<body class="min-h-screen bg-[#07070c] text-white antialiased overflow-x-hidden">
+  <!-- BACKGROUND LAYERS -->
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <!-- gradient base -->
+    <div class="absolute inset-0 bg-[radial-gradient(1200px_700px_at_80%_10%,rgba(109,40,255,0.35),transparent_60%),radial-gradient(900px_600px_at_20%_80%,rgba(58,130,255,0.22),transparent_60%),radial-gradient(900px_600px_at_10%_20%,rgba(210,60,255,0.16),transparent_60%),linear-gradient(180deg,#05050a_0%,#07070c_40%,#04040a_100%)]"></div>
+
+    <!-- faint "stars" grid -->
+    <div class="absolute inset-0 opacity-[0.08] bg-[radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+
+    <!-- vignette -->
+    <div class="absolute inset-0 bg-[radial-gradient(1000px_700px_at_50%_40%,transparent_45%,rgba(0,0,0,0.65)_95%)]"></div>
+  </div>
+
+  <!-- NAV -->
+<nav class="sticky top-4 z-20">
+  <div class="mx-auto max-w-6xl px-4">
+    <div class="flex items-center justify-between rounded-2xl border border-white/15 bg-black/30 px-4 py-3 shadow-2xl backdrop-blur-xl">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center">
+          <img src="{% static 'images/NoteTube-logo.png' %}?v=2">
+        </div>
+        <h1 class="text-xl font-semibold tracking-tight">NoteTube</h1>
+      </div>
+
+      <div class="hidden items-center gap-6 text-sm text-white/75 md:flex">
+        <!-- <a href="#features" class="hover:text-white transition-colors">Features</a> -->
+        <!-- <a href="#how" class="hover:text-white transition-colors">How it works</a> -->
+        <!-- <a href="#pricing" class="hover:text-white transition-colors">Pricing</a> -->
+      </div>
+
+      <a href="signup"
+         class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 transition-colors">
+        Start now
+      </a>
+    </div>
+  </div>
+</nav>
+
+  <!-- HERO -->
+  <main class="mx-auto max-w-6xl px-4">
+    <section class="py-14 md:py-20">
+      <div class="grid items-center gap-10 md:grid-cols-2">
+        <!-- LEFT -->
+        <div>
+          <!-- announcement pill -->
+          <a href="#"
+             class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80 hover:bg-white/10">
+            <span>🎉</span>
+            <span>New: Upload YouTube links → instant notes</span>
+            <span class="ml-1 text-white/50">→</span>
+          </a>
+
+          <h2 class="mt-8 text-5xl font-semibold tracking-tight md:text-6xl">
+            Meet <span class="text-white">NoteTube</span>
+          </h2>
+
+          <p class="mt-5 text-lg leading-relaxed text-white/70 md:text-xl">
+            Turn any lecture or YouTube video into clean notes, flashcards, quizzes, and summaries — in seconds.
+          </p>
+
+          <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a href="signup"
+               class="inline-flex justify-center rounded-2xl bg-[#6d28ff] px-6 py-3 text-base font-semibold hover:opacity-90">
+              Get Started — It’s Free
+            </a>
+            <a href="#how"
+               class="inline-flex justify-center rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-base font-semibold text-white/85 hover:bg-white/10">
+              See how it works
+            </a>
+          </div>
+
+          <div class="mt-6 flex items-center gap-4 text-sm text-white/55">
+            <div class="flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+              No credit card
+            </div>
+            <div class="h-4 w-px bg-white/10"></div>
+            <div>Export to Notion / Docs</div>
+            <div class="h-4 w-px bg-white/10"></div>
+            <div>Built for students</div>
+          </div>
+        </div>
+
+        <!-- RIGHT (GLASS CARD PREVIEW) -->
+        <div class="relative">
+          <!-- glow behind the card -->
+          <div class="absolute -inset-8 rounded-[2rem] bg-[radial-gradient(circle_at_30%_30%,rgba(109,40,255,0.35),transparent_55%),radial-gradient(circle_at_70%_60%,rgba(58,130,255,0.22),transparent_55%)] blur-2xl"></div>
+
+          <div class="relative rounded-[2rem] border border-white/15 bg-white/5 p-6 shadow-2xl backdrop-blur-xl">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-sm text-white/70">
+                <span class="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">📚</span>
+                <span class="font-medium text-white/85">Lecture 5: Cellular Biology</span>
+              </div>
+              <span class="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70">
+                Preview
+              </span>
+            </div>
+
+            <div class="mt-5 space-y-4">
+              <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p class="text-sm font-semibold text-white/85">Key Takeaways</p>
+                <ul class="mt-3 space-y-2 text-sm text-white/70">
+                  <li class="flex gap-2"><span class="text-white/40">•</span> Cells are the basic unit of life</li>
+                  <li class="flex gap-2"><span class="text-white/40">•</span> All cells come from pre-existing cells</li>
+                  <li class="flex gap-2"><span class="text-white/40">•</span> Structure determines function</li>
+                </ul>
+              </div>
+
+              <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p class="text-sm font-semibold text-white/85">Flashcards</p>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <p class="text-xs text-white/50">Q</p>
+                    <p class="mt-1 text-sm text-white/80">What’s the cell theory?</p>
+                  </div>
+                  <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <p class="text-xs text-white/50">A</p>
+                    <p class="mt-1 text-sm text-white/80">All living things are made of cells.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-semibold text-white/85">Generate</p>
+                  <span class="text-xs text-white/50">~12s</span>
+                </div>
+                <div class="mt-3 flex gap-2">
+                  <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">Notes</span>
+                  <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">Quiz</span>
+                  <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">Summary</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 flex items-center justify-between text-xs text-white/50">
+              <span>Upload → Process → Export</span>
+              <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1">AI-powered</span>
+            </div>
+          </div>
+
+          <!-- little floating chip like cookie/settings (optional)
+          <div class="absolute -bottom-6 right-4 hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-xs text-white/70 backdrop-blur-xl md:block">
+            Cookie settings
+            <div class="mt-2 flex gap-2">
+              <button class="rounded-full border border-white/10 bg-white/5 px-3 py-1 hover:bg-white/10">Accept</button>
+              <button class="rounded-full border border-white/10 bg-white/5 px-3 py-1 hover:bg-white/10">Essential</button>
+            </div>
+          </div> -->
+        </div>
+      </div>
+    </section>
+
+    <!-- SIMPLE SECTIONS TO MATCH NAV (optional placeholders) -->
+  </main>
+</body>
+</html>
