@@ -4,3 +4,7 @@ dotenv
 pytubefix
 assemblyai
 openai
+django-allauth
+requests
+pyjwt
+cryptography
