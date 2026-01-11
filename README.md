@@ -24,6 +24,10 @@ An AI-powered web app that turns your favorite YouTube video tutorials into orga
     - Sign up / log in
     - Create notes with AI
 
+- **API-Chain Pipeline**
+  - Turn YouTube videos into transcripts via AssemblyAI.
+  - Transcripts get plugged into the prompt to create structured notes.
+
 ---
 
 ## 📚 What I Learned From This Project
@@ -32,7 +36,10 @@ An AI-powered web app that turns your favorite YouTube video tutorials into orga
   I learned how to work with the Django framework and its quick-to-develop qualities, like a built-in authentication system.
 
 - **API-Chain Pipeline**
-  Learned how to chain API outputs into inputs by feeding AssemblyAI transcripts into OpenAI to produce clean, structured notes.
+  I Learned how to chain API outputs into inputs by feeding AssemblyAI transcripts into OpenAI to produce clean, structured notes.
+
+- **OAuth for 3rd party account authorization**
+  I learned how to integrate OAuth into a Django web app via AllAuth (Google OAuth) for enhanced security and convenience.
   
 - **Tailwind CSS**  
   I worked on adding some styling using Tailwind CSS instead of just using normal CSS.
