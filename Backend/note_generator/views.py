@@ -13,6 +13,8 @@ import openai
 from .models import NotePost
 import traceback
 import tempfile
+from note_generator.utils.cache_utils import cached_get_or_set
+from django.core.cache import cache
 
 def home(request):
     return render(request, 'home.html')
@@ -21,6 +23,7 @@ def home(request):
 def index(request):
     return render(request, 'index.html')
 
+@login_required
 @csrf_exempt
 def generate_note(request):
     if request.method == 'POST':
@@ -52,22 +55,32 @@ def generate_note(request):
         )
         new_note.save()
 
+        # invalidate cahced list for this user 
+        cache.delete(f"notes:list:user:{request.user.id}")
+
         # return ai made notes as a response
         return JsonResponse({"content": note_content})
 
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+@login_required
 def note_list(request):
-    notetube_post = NotePost.objects.filter(user=request.user)
+    key = f"notes:list:user:{request.user.id}"
+
+    notetube_post = cached_get_or_set(key=key, timeout=60, compute=lambda: list(NotePost.objects.filter(user=request.user).order_by("-id")))
     return render(request, "notes.html", {'notetube_post': notetube_post})
 
+@login_required
 def note_details(request, pk):
-    note_post_detail = NotePost.objects.get(id=pk)
-    if request.user == note_post_detail.user:
-        return render(request, 'note_details.html', {'note_post_detail': note_post_detail})
-    else:
-        return redirect('/')
+    key = f"notes:detail:user:{request.user.id}:pk:{pk}"
+
+    try:
+        note_post_detail = cached_get_or_set(key=key, timeout=300, compute=lambda: NotePost.objects.get(id=pk, user=request.user))
+    except NotePost.DoesNotExist:
+        return redirect('/note-list')
+
+    return render(request, 'note_details.html', {'note_post_detail': note_post_detail})
 
 def yt_title(link):
     yt = YouTube(link)
@@ -92,12 +105,14 @@ def download_audio(link): # made this download temp only for transcription then 
 # we gon use assembly ai to get the transcription
 def get_transcript(link):
     audio_file = download_audio(link)
-    aai.settings.api_key = os.getenv('APIKEY')
-
-    transcriber = aai.Transcriber()
-    transcript = transcriber.transcribe(audio_file)
-
-    return transcript.text
+    try:
+        aai.settings.api_key = os.getenv('APIKEY')
+        transcriber = aai.Transcriber()
+        transcript = transcriber.transcribe(audio_file)
+        return transcript.text
+    finally:
+        if audio_file and os.path.exists(audio_file):
+            os.remove(audio_file)
 
 def generate_blog_from_transcription(transcription):
     openai.api_key = os.getenv('OPENAI_API_KEY')
