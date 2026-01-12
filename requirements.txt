@@ -10,3 +10,4 @@ pyjwt
 cryptography
 django-redis
 django-debug-toolbar
+gunicorn

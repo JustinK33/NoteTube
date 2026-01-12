@@ -1,0 +1,26 @@
+services:
+  web:
+    build: . # uses my Dockerfile to build the image
+    env_file: .env
+    expose:
+      - "8000" # visible only to other services, not host machine
+    volumes:
+      - static_data:/vol/static
+  
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80" # this is the only public entry point
+    volumes:
+      - ./Backend/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_data:/vol/static:ro
+    depends_on:
+      - web
+
+volumes:
+  static_data:
+
+
+# docker compose up --build : for rebuilds
+# docker compose up -d : doesnt force rebuild and runs in background
+# docker compose down

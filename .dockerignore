@@ -1,0 +1,13 @@
+dist
+build
+target
+.venv
+venv
+__pycache__
+*.pyc
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+.env
+*.log
