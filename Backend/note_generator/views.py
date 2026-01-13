@@ -15,6 +15,9 @@ import traceback
 import tempfile
 from note_generator.utils.cache_utils import cached_get_or_set
 from django.core.cache import cache
+import re
+import logging
+import subprocess
 
 def home(request):
     return render(request, 'home.html')
@@ -23,13 +26,46 @@ def home(request):
 def index(request):
     return render(request, 'index.html')
 
+# learn this later
+logger = logging.getLogger(__name__)
+
+YOUTUBE_ID_RE = re.compile(r"([0-9A-Za-z_-]{11})")
+
+def normalize_youtube_url(raw: str) -> str:
+    raw = (raw or "").strip()
+
+    # If they sent just the 11-char id
+    if len(raw) == 11 and YOUTUBE_ID_RE.fullmatch(raw):
+        vid = raw
+        return f"https://www.youtube.com/watch?v={vid}"
+
+    patterns = [
+        r"youtu\.be/([0-9A-Za-z_-]{11})",
+        r"youtube\.com/watch\?v=([0-9A-Za-z_-]{11})",
+        r"[?&]v=([0-9A-Za-z_-]{11})",
+        r"youtube\.com/embed/([0-9A-Za-z_-]{11})",
+        r"youtube\.com/shorts/([0-9A-Za-z_-]{11})",
+    ]
+
+    for p in patterns:
+        m = re.search(p, raw)
+        if m:
+            vid = m.group(1)
+            return f"https://www.youtube.com/watch?v={vid}"
+
+    raise ValueError(f"Invalid YouTube link: {raw}")
+
 @login_required
 @csrf_exempt
 def generate_note(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            yt_link = data['link']
+            yt_link_raw = data.get("link", "")
+            try:
+                yt_link = normalize_youtube_url(yt_link_raw)
+            except ValueError as e:
+                return JsonResponse({"error": str(e)}, status=400)
         except (KeyError, json.JSONDecodeError):
             return JsonResponse({'error': 'Invalid data sent'}, status=400)
 
