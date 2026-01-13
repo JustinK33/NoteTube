@@ -6,7 +6,7 @@ services:
       - "8000" # visible only to other services, not host machine
     volumes:
       - static_data:/vol/static
-  
+      - ./www.youtube.com_cookies.txt:/app/www.youtube.com_cookies.txt:ro 
   nginx:
     image: nginx:alpine
     ports:
