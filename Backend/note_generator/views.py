@@ -123,20 +123,30 @@ def yt_title(link):
     title = yt.title
     return title
 
-def download_audio(link): # made this download temp only for transcription then delete
-    yt = YouTube(link)
-    video = yt.streams.filter(only_audio=True).first()
-    if video is None:
-        raise ValueError("No audio stream found for this video.")
-    
-    #im using pytubefix instead of pytube because of some bugs
-    out_file = tempfile.gettempdir()
-    downloaded_path = video.download(output_path=out_file)
+import subprocess, tempfile, os, glob
 
-    base, ext = os.path.splitext(downloaded_path) # type: ignore
-    new_file = base + '.mp3'
-    os.rename(downloaded_path, new_file) # type: ignore
-    return new_file
+def download_audio(link: str) -> str:
+    tmpdir = tempfile.gettempdir()
+    outtmpl = os.path.join(tmpdir, "%(id)s.%(ext)s")
+
+    # downloads best audio; yt-dlp chooses an audio container (webm/m4a usually)
+    cmd = [
+        "yt-dlp",
+        "-f", "bestaudio",
+        "-o", outtmpl,
+        link,
+    ]
+
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        raise RuntimeError(f"yt-dlp failed:\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}")
+
+    # find the newest downloaded file in /tmp (simple + reliable)
+    candidates = sorted(glob.glob(os.path.join(tmpdir, "*.*")), key=os.path.getmtime, reverse=True)
+    if not candidates:
+        raise RuntimeError("yt-dlp succeeded but no file found in temp dir")
+
+    return candidates[0]
 
 # we gon use assembly ai to get the transcription
 def get_transcript(link):

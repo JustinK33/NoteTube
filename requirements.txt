@@ -11,3 +11,4 @@ cryptography
 django-redis
 django-debug-toolbar
 gunicorn
+yt-dlp
