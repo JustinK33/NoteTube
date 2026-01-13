@@ -21,6 +21,6 @@ volumes:
   static_data:
 
 
-# docker compose up --build : for rebuilds
+# docker compose up --build : for rebuilds can add -d for no logs
 # docker compose up -d : doesnt force rebuild and runs in background
 # docker compose down
