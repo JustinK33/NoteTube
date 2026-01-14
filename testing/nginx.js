@@ -5,10 +5,8 @@ export const options = {
     duration: '10s',
 };
 
-// testing straight towards django
+// this was for checking Static via Nginx
 export default function () {
-    const res = http.get("http://web:8000/static/images/NoteTube-logo.png", {
-        headers: { Host: '54.167.105.59'}
-    });
-    check(res, { '200': (r) => r.status === 200});
-}
+     const res = http.get("http://54.167.105.59/static/images/NoteTube-logo.png?v=3");
+     check(res, { '200': (r) => r.status === 200});
+ };
