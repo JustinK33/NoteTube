@@ -1,9 +1,7 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
-export const options = {
-    duration: '10s',
-};
+export const options = { vus: 1, iterations: 200 };
 
 // this was for checking Static via Nginx
 export default function () {
