@@ -1,7 +1,6 @@
 django
 psycopg[binary]
 dotenv
-pytubefix
 assemblyai
 openai
 django-allauth
@@ -12,3 +11,4 @@ django-redis
 django-debug-toolbar
 gunicorn
 yt-dlp
+whitenoise

@@ -4,6 +4,8 @@ services:
     env_file: .env
     expose:
       - "8000" # visible only to other services, not host machine
+    ports:
+      - "127.0.0.1:8000:8000"
     volumes:
       - static_data:/vol/static
       - ./www.youtube.com_cookies.txt:/app/www.youtube.com_cookies.txt:ro 
