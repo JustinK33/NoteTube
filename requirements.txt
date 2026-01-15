@@ -12,3 +12,4 @@ django-debug-toolbar
 gunicorn
 yt-dlp
 whitenoise
+pytubefix
