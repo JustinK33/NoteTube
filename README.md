@@ -37,17 +37,17 @@ An AI-powered web app that turns your favorite YouTube video tutorials into orga
 ## 📚 What I Learned From This Project
 
 - **Reverse Proxy via Nginx**
-  - Integrated a reverse proxy via **Nginx** sitting in front of my webserver
-  - Using light-weight version of the heavy NGINX image, nginx:alpine, significantly improving static assest performance
+  Integrated a reverse proxy via **Nginx** sitting in front of my webserver
+  Using light-weight version of the heavy NGINX image, nginx:alpine, significantly improving static assest performance
    
 - **Deployment via AWS EC2 instance**
-  - Deployed and configured EC2 instance for hosting a web application
+  Deployed and configured EC2 instance for hosting a web application
  
 - **Load and stress testing with k6**
-  - Implemented **k6-based** load and stress tests to validate API performance, **latency**,** throughput (req/s)** and error rates under realistic traffic patterns.
+  Implemented **k6-based** load and stress tests to validate API performance, **latency**,** throughput (req/s)** and error rates under realistic traffic patterns.
  
 - **Managing multiple containers**
-  - Defined, configured, and managed a multi-container application.
+  Defined, configured, and managed a multi-container application.
 
 - **Working with Django**  
   I learned how to work with the Django framework and its quick-to-develop qualities, like a built-in authentication system.
