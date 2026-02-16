@@ -1,6 +1,8 @@
 # NoteTube
 
-An AI-powered web app that turns your favorite YouTube video tutorials into organized and structured notes
+An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (more to be added) into organized and structured notes
+
+[![CI](https://github.com/JustinK33/NoteTube/actions/workflows/ci.yml/badge.svg)](https://github.com/JustinK33/NoteTube/actions/workflows/ci.yml)
 
 ---
 
@@ -42,7 +44,10 @@ An AI-powered web app that turns your favorite YouTube video tutorials into orga
    
 - **Deployment via AWS EC2 instance**
   Deployed and configured EC2 instance for hosting a web application
- 
+
+- **Integrated Continuous Integration**
+  Implemented GitHub action workflows for continuous integration and continuous delivery
+   
 - **Load and stress testing with k6**
   Implemented **k6-based** load and stress tests to validate API performance, **latency**,** throughput (req/s)** and error rates under realistic traffic patterns.
  
@@ -57,9 +62,6 @@ An AI-powered web app that turns your favorite YouTube video tutorials into orga
 
 - **OAuth for 3rd party account authorization**
   I learned how to integrate OAuth into a Django web app via AllAuth (Google OAuth) for enhanced security and convenience.
-  
-- **Tailwind CSS**  
-  I worked on adding some styling using Tailwind CSS instead of just using normal CSS.
 
 ---
 
@@ -75,7 +77,5 @@ An AI-powered web app that turns your favorite YouTube video tutorials into orga
      
 ### Run with Docker
 
-  2. Build image (docker build -t notetube:latest)
-  3. Run image (docker run --rm -p 8000:8000 --env-file .env notetube:latest)
-
-
+  1. Build image (docker build -t notetube:latest)
+  2. Run image (docker run --rm -p 8000:8000 --env-file .env notetube:latest)
