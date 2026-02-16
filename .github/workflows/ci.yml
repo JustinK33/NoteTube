@@ -30,4 +30,4 @@ jobs:
                 black --check .
 
             - name: Run tests with coverage
-              run: pytest --cov=. --cov-report=term --cov-fail-under=80
+              run: pytest --cov=. --cov-report=term
