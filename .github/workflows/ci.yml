@@ -30,9 +30,5 @@ jobs:
                 black --check Backend/
 
             - name: Run tests with coverage
-              env:
-                DJANGO_SETTINGS_MODULE: notetube.settings
-                PYTHONPATH: ${{ github.workspace }}/Backend:${{ github.workspace }}
-              run: |
-                cd Backend
-                pytest ../tests --cov=note_generator --cov-report=term
+              working-directory: ${{ github.workspace }}
+              run: pytest tests/ --cov=Backend/note_generator --cov-report=term -v
