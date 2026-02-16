@@ -31,4 +31,7 @@ jobs:
 
             - name: Run tests with coverage
               working-directory: ${{ github.workspace }}
+              env:
+                SECRET_KEY: ${{ secrets.SECRET_KEY }}
+                DATABASE_URL: ${{ secrets.DATABASE_URL }}
               run: pytest tests/ --cov=Backend/note_generator --cov-report=term -v
