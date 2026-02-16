@@ -30,4 +30,6 @@ jobs:
                 black --check .
 
             - name: Run tests with coverage
+              env:
+                DJANGO_SETTINGS_MODULE: notetube.settings
               run: pytest --cov=. --cov-report=term
