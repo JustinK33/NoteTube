@@ -75,14 +75,51 @@
       </div>
 
       <div class="mt-8">
-        <h2 class="text-xl font-semibold mb-4 text-white/90">Enter YouTube Video Link</h2>
+        <!-- Tab Buttons -->
+        <div class="flex gap-3 mb-6 border-b border-white/10">
+          <button id="youtubeTab" class="tab-button pb-3 px-1 font-semibold text-white/90 border-b-2 border-[#6d28ff] transition-colors active-tab">
+            YouTube Link
+          </button>
+          <button id="mp3Tab" class="tab-button pb-3 px-1 font-semibold text-white/50 border-b-2 border-transparent hover:text-white/70 transition-colors">
+            Upload MP3
+          </button>
+        </div>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input id="youtubeLink" type="url" placeholder="Paste YouTube Link..." class="flex-grow w-full h-12 rounded-2xl bg-black/20 border border-white/15 px-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60"/>
+        <!-- YouTube Tab Content -->
+        <div id="youtubeContent" class="tab-content">
+          <h2 class="text-xl font-semibold mb-4 text-white/90">Enter YouTube Video Link</h2>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input id="youtubeLink" type="url" placeholder="Paste YouTube Link..." class="flex-grow w-full h-12 rounded-2xl bg-black/20 border border-white/15 px-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60"/>
+            <button id="generateBlogButton" class="h-12 shrink-0 rounded-2xl bg-[#6d28ff] px-6 font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
+              Generate Notes
+            </button>
+          </div>
+        </div>
 
-        <button id="generateBlogButton" class="h-12 shrink-0 rounded-2xl bg-[#6d28ff] px-6 font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
-            Generate Notes
-        </button>
+        <!-- MP3 Tab Content -->
+        <div id="mp3Content" class="tab-content hidden">
+          <h2 class="text-xl font-semibold mb-4 text-white/90">Upload MP3 File</h2>
+          <div class="flex flex-col gap-4">
+            <div>
+              <label for="mp3Title" class="block text-sm font-medium text-white/70 mb-2">Note Title</label>
+              <input id="mp3Title" type="text" placeholder="Enter a title for your notes..." class="w-full h-12 rounded-2xl bg-black/20 border border-white/15 px-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60"/>
+            </div>
+            <div>
+              <label for="mp3File" class="block text-sm font-medium text-white/70 mb-2">Select MP3 File</label>
+              <div class="relative">
+                <input id="mp3File" type="file" accept=".mp3" class="hidden"/>
+                <button id="mp3FileButton" class="w-full h-12 rounded-2xl bg-black/20 border border-white/15 px-4 text-white/70 hover:text-white hover:bg-black/30 transition-all text-left flex items-center justify-between">
+                  <span id="mp3FileName" class="text-white/50">Choose MP3 file...</span>
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <button id="generateMp3Button" class="h-12 rounded-2xl bg-[#6d28ff] px-6 font-semibold hover:opacity-90 transition-opacity">
+              Generate Notes from MP3
+            </button>
+          </div>
         </div>
 
         <div style="display:none;" id="loading-circle" class="load"></div>
@@ -99,14 +136,45 @@
   </div>
 
   <script>
+    // Tab switching functionality
+    document.getElementById('youtubeTab').addEventListener('click', () => {
+      document.getElementById('youtubeContent').classList.remove('hidden');
+      document.getElementById('mp3Content').classList.add('hidden');
+      document.getElementById('youtubeTab').classList.add('border-[#6d28ff]', 'text-white/90');
+      document.getElementById('youtubeTab').classList.remove('border-transparent', 'text-white/50');
+      document.getElementById('mp3Tab').classList.add('border-transparent', 'text-white/50');
+      document.getElementById('mp3Tab').classList.remove('border-[#6d28ff]', 'text-white/90');
+    });
+
+    document.getElementById('mp3Tab').addEventListener('click', () => {
+      document.getElementById('youtubeContent').classList.add('hidden');
+      document.getElementById('mp3Content').classList.remove('hidden');
+      document.getElementById('mp3Tab').classList.add('border-[#6d28ff]', 'text-white/90');
+      document.getElementById('mp3Tab').classList.remove('border-transparent', 'text-white/50');
+      document.getElementById('youtubeTab').classList.add('border-transparent', 'text-white/50');
+      document.getElementById('youtubeTab').classList.remove('border-[#6d28ff]', 'text-white/90');
+    });
+
+    // MP3 file input handler
+    document.getElementById('mp3FileButton').addEventListener('click', () => {
+      document.getElementById('mp3File').click();
+    });
+
+    document.getElementById('mp3File').addEventListener('change', (e) => {
+      const fileName = e.target.files[0]?.name || 'Choose MP3 file...';
+      document.getElementById('mp3FileName').textContent = fileName;
+      document.getElementById('mp3FileName').classList.remove('text-white/50');
+      document.getElementById('mp3FileName').classList.add('text-white');
+    });
+
+    // YouTube notes generation
     document.getElementById('generateBlogButton').addEventListener('click', async () => {
       const youtubeLink = document.getElementById('youtubeLink').value;
       const blogContent = document.getElementById('blogContent');
 
       if (youtubeLink) {
         document.getElementById('loading-circle').style.display = 'block';
-
-        blogContent.innerHTML = ''; // Clear previous content
+        blogContent.innerHTML = '';
 
         const endpointUrl = '/generate-notes';
 
@@ -121,7 +189,11 @@
 
           const data = await response.json();
 
-          blogContent.innerHTML = data.content;
+          if (data.error) {
+            alert('Error: ' + data.error);
+          } else {
+            blogContent.innerHTML = data.content;
+          }
 
         } catch (error) {
           console.error("Error occurred:", error);
@@ -132,6 +204,51 @@
       } else {
         alert("Please enter a YouTube link.");
       }
+    });
+
+    // MP3 notes generation
+    document.getElementById('generateMp3Button').addEventListener('click', async () => {
+      const mp3File = document.getElementById('mp3File').files[0];
+      const title = document.getElementById('mp3Title').value || 'Untitled Note';
+      const blogContent = document.getElementById('blogContent');
+
+      if (!mp3File) {
+        alert("Please select an MP3 file.");
+        return;
+      }
+
+      document.getElementById('loading-circle').style.display = 'block';
+      blogContent.innerHTML = '';
+
+      const formData = new FormData();
+      formData.append('mp3_file', mp3File);
+      formData.append('title', title);
+
+      try {
+        const response = await fetch('/mp3-to-notes', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          alert('Error: ' + data.error);
+        } else {
+          blogContent.innerHTML = data.content;
+          document.getElementById('mp3File').value = '';
+          document.getElementById('mp3FileName').textContent = 'Choose MP3 file...';
+          document.getElementById('mp3FileName').classList.add('text-white/50');
+          document.getElementById('mp3FileName').classList.remove('text-white');
+          document.getElementById('mp3Title').value = '';
+        }
+
+      } catch (error) {
+        console.error("Error occurred:", error);
+        alert("Something went wrong. Please try again later.");
+      }
+
+      document.getElementById('loading-circle').style.display = 'none';
     });
   </script>
 
