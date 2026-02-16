@@ -13,3 +13,4 @@ gunicorn
 yt-dlp
 whitenoise
 pytubefix
+fastapi.responses

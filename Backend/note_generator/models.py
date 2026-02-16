@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 class NotePost(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     youtube_title = models.CharField(max_length=300)
-    youtube_link = models.URLField()
+    youtube_link = models.URLField(blank=True, null=True)  # Optional for MP3 sources
     generated_content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 

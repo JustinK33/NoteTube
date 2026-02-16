@@ -1,11 +1,12 @@
-from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.conf import settings
+from fastapi import HTTPException
 import json, os
 from pytubefix import YouTube
 import assemblyai as aai
@@ -18,6 +19,11 @@ from django.core.cache import cache
 import re
 import logging
 import subprocess
+from fastapi.responses import FileResponse
+import tempfile
+import shutil
+
+aai.settings.api_key = os.getenv('APIKEY')
 
 def home(request):
     return render(request, 'home.html')
@@ -54,6 +60,80 @@ def normalize_youtube_url(raw: str) -> str:
             return f"https://www.youtube.com/watch?v={vid}"
 
     raise ValueError(f"Invalid YouTube link: {raw}")
+
+@login_required
+@csrf_exempt
+def mp3_to_notes(request):
+    if request.method == 'POST':
+        try:
+            # Get MP3 file and title from form data
+            mp3_file = request.FILES.get('mp3_file')
+            title = request.POST.get('title', 'Untitled Note')
+            
+            if not mp3_file:
+                return JsonResponse({'error': 'No MP3 file provided'}, status=400)
+            
+            if not mp3_file.name.endswith('.mp3'):
+                return JsonResponse({'error': 'File must be an MP3'}, status=400)
+            
+            # Save MP3 to temporary location
+            temp_dir = tempfile.mkdtemp()
+            mp3_path = os.path.join(temp_dir, mp3_file.name)
+            with open(mp3_path, 'wb') as f:
+                for chunk in mp3_file.chunks():
+                    f.write(chunk)
+            
+            # Get transcript from MP3
+            transcription = get_mp3_transcript(mp3_path)
+            if not transcription:
+                shutil.rmtree(temp_dir)
+                return JsonResponse({'error': 'Failed to get transcript'}, status=500)
+            
+            # Use OpenAI to generate notes
+            note_content = generate_blog_from_transcription(transcription)
+            if not note_content:
+                shutil.rmtree(temp_dir)
+                return JsonResponse({'error': 'Failed to generate notes'}, status=500)
+            
+            # Save notes to database
+            new_note = NotePost.objects.create(
+                user=request.user,
+                youtube_title=title,
+                youtube_link='',  # No YouTube link for MP3
+                generated_content=note_content
+            )
+            new_note.save()
+            
+            # Clean up temporary files
+            shutil.rmtree(temp_dir)
+            
+            # Invalidate cached list for this user
+            cache.delete(f"notes:list:user:{request.user.id}")
+            
+            # Return generated notes as response
+            return JsonResponse({"content": note_content})
+        
+        except Exception as e:
+            return JsonResponse({'error': f'Error processing MP3: {str(e)}'}, status=500)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+def get_mp3_transcript(mp3_path: str) -> str:
+# since they upload a mp3 we dont need to store it and just get a transcript from it
+    if not mp3_path.endswith(".mp3"):
+        raise ValueError("File must be an .mp3")
+    
+    if not os.path.exists(mp3_path):
+        raise FileNotFoundError(f"{mp3_path} not found")
+    
+    transcriber = aai.Transcriber()
+    transcript = transcriber.transcribe(mp3_path)
+
+    if transcript.text is None: # fixes type check error
+        raise RuntimeError("Transcription error: no text returned")
+
+    return transcript.text
+
 
 @login_required
 @csrf_exempt
@@ -152,7 +232,6 @@ def download_audio(link: str) -> str:
 def get_transcript(link):
     audio_file = download_audio(link)
     try:
-        aai.settings.api_key = os.getenv('APIKEY')
         transcriber = aai.Transcriber()
         transcript = transcriber.transcribe(audio_file)
         return transcript.text
