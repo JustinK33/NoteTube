@@ -15,5 +15,6 @@ whitenoise
 pytubefix
 fastapi.responses
 black
+pytest-django
 pytest
 pytest-cov
