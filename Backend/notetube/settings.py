@@ -40,6 +40,7 @@ ALLOWED_HOSTS = os.getenv(
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 
 # Application definition
 
