@@ -27,9 +27,12 @@ jobs:
             
             - name: Check formatting (Black)
               run: |
-                black --check .
+                black --check Backend/
 
             - name: Run tests with coverage
               env:
                 DJANGO_SETTINGS_MODULE: notetube.settings
-              run: pytest --cov=. --cov-report=term
+                PYTHONPATH: ${{ github.workspace }}/Backend:${{ github.workspace }}
+              run: |
+                cd Backend
+                pytest ../tests --cov=note_generator --cov-report=term
