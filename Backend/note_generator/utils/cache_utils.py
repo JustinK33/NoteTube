@@ -4,6 +4,7 @@ from django.core.cache import cache
 T = TypeVar("T")
 _MISS = object()
 
+
 def cached_get_or_set(key: str, timeout: int, compute: Callable[[], T]) -> T:
     value = cache.get(key, _MISS)
     if value is not _MISS:

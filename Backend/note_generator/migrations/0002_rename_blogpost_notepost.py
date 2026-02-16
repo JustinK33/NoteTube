@@ -7,13 +7,13 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('note_generator', '0001_initial'),
+        ("note_generator", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='BlogPost',
-            new_name='NotePost',
+            old_name="BlogPost",
+            new_name="NotePost",
         ),
     ]
