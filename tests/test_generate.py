@@ -38,4 +38,6 @@ class NoteGenerationTest(TestCase):
             url, json.dumps({}), content_type="application/json"
         )
         assert response.status_code == 400
-        assert "error" in response.json()
+        data = response.json()
+        assert "error_code" in data
+        assert data["error_code"] == "invalid_url"

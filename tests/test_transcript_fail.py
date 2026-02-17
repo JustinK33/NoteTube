@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
+from note_generator.transcript_utils import NoTranscriptError
 
 
 class TranscriptFailureTest(TestCase):
@@ -11,13 +12,16 @@ class TranscriptFailureTest(TestCase):
         self.user = User.objects.create_user(username="u", password="p12345678")
         self.client.login(username="u", password="p12345678")
 
-    @patch("note_generator.views.get_transcript", return_value=None)
+    @patch("note_generator.transcript_utils.get_transcript_with_diagnostics")
     @patch("note_generator.views.yt_title", return_value="Any Title")
     @patch(
         "note_generator.views.generate_blog_from_transcription",
         return_value="won't be used",
     )
-    def test_transcript_missing_returns_502(self, _gen, _title, _transcript):
+    def test_transcript_missing_returns_502(self, _gen, _title, _transcript_diag):
+        # Mock the function to return None transcript with error
+        _transcript_diag.return_value = (None, NoTranscriptError())
+        
         url = reverse("generate-notes")
         resp = self.client.post(
             url,
@@ -26,4 +30,6 @@ class TranscriptFailureTest(TestCase):
         )
 
         assert resp.status_code == 502
-        assert "Transcript" in resp.json()["error"]
+        data = resp.json()
+        assert "error_code" in data
+        assert data["error_code"] == "no_transcript"
