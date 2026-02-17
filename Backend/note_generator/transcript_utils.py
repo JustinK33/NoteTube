@@ -1,6 +1,7 @@
 """
 Transcript fetching utilities with error handling, caching, and diagnostics.
 """
+
 import logging
 import re
 from typing import Optional, Tuple
@@ -71,12 +72,12 @@ def get_transcript_with_diagnostics(
 ) -> Tuple[Optional[str], Optional[TranscriptFetchError]]:
     """
     Fetch transcript with caching and error handling.
-    
+
     Args:
         youtube_url: Full YouTube URL
         get_transcript_func: Callable that fetches transcript (returns str or None)
         timeout: Cache timeout in seconds
-    
+
     Returns:
         (transcript_text, error)
         - If successful: (text, None)

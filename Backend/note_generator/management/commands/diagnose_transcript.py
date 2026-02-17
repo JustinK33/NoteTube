@@ -4,6 +4,7 @@ Management command to diagnose transcript fetch issues.
 Usage:
     python manage.py diagnose_transcript "https://www.youtube.com/watch?v=xyz"
 """
+
 from django.core.management.base import BaseCommand, CommandError
 from note_generator.views import get_transcript
 from note_generator.transcript_utils import extract_video_id
@@ -26,7 +27,9 @@ class Command(BaseCommand):
         youtube_url = options["youtube_url"]
 
         self.stdout.write(
-            self.style.SUCCESS(f"\n📋 Diagnosing transcript fetch for:\n   {youtube_url}\n")
+            self.style.SUCCESS(
+                f"\n📋 Diagnosing transcript fetch for:\n   {youtube_url}\n"
+            )
         )
 
         # Step 1: Extract video ID
@@ -89,9 +92,7 @@ class Command(BaseCommand):
                 )
             else:
                 self.stdout.write(
-                    self.style.WARNING(
-                        f"💡 Unknown error. Check logs for details."
-                    )
+                    self.style.WARNING(f"💡 Unknown error. Check logs for details.")
                 )
 
         self.stdout.write("\n")

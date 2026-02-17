@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
 
+
 class TranscriptFailureTest(TestCase):
     def setUp(self):
         User = get_user_model()
@@ -12,7 +13,10 @@ class TranscriptFailureTest(TestCase):
 
     @patch("note_generator.views.get_transcript", return_value=None)
     @patch("note_generator.views.yt_title", return_value="Any Title")
-    @patch("note_generator.views.generate_blog_from_transcription", return_value="won't be used")
+    @patch(
+        "note_generator.views.generate_blog_from_transcription",
+        return_value="won't be used",
+    )
     def test_transcript_missing_returns_502(self, _gen, _title, _transcript):
         url = reverse("generate-notes")
         resp = self.client.post(

@@ -1,6 +1,7 @@
 """
 Tests for robust transcript fetching with error handling and caching.
 """
+
 import pytest
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
@@ -77,7 +78,9 @@ class TestGenerateNoteEndpoint(TestCase):
     """Test the /generate-notes endpoint with various error scenarios."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpass123")
+        self.user = User.objects.create_user(
+            username="testuser", password="testpass123"
+        )
         self.client = Client()
         self.client.login(username="testuser", password="testpass123")
 
@@ -121,7 +124,9 @@ class TestGenerateNoteEndpoint(TestCase):
 
     @patch("note_generator.views.get_transcript")
     @patch("note_generator.views.yt_title")
-    def test_transcript_fetch_429_rate_limited(self, mock_yt_title, mock_get_transcript):
+    def test_transcript_fetch_429_rate_limited(
+        self, mock_yt_title, mock_get_transcript
+    ):
         """Simulate rate limiting with HTTP 429."""
         mock_yt_title.return_value = "Test Video"
         mock_get_transcript.side_effect = Exception("HTTP 429: Too Many Requests")
