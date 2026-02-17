@@ -147,8 +147,12 @@ def get_transcript_with_diagnostics(
             error = YouTubeBlockedError("CAPTCHA required")
         elif "not available" in error_str or "no captions" in error_str:
             error = NoTranscriptError()
+        elif "yt-dlp failed" in error_str or "youtube" in error_str:
+            # Audio download failed (likely YouTube blocking or video unavailable)
+            error = YouTubeBlockedError("YouTube download failed - video may be restricted")
         else:
-            error = YouTubeBlockedError(f"Error: {str(e)[:50]}")
+            # Generic error - still report as YouTube blocked since we can't fetch
+            error = YouTubeBlockedError("Failed to fetch video")
 
         # Cache the error for 10 minutes to reduce retries on rate limits
         cache.set(
