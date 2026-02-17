@@ -85,6 +85,7 @@ class TestGenerateNoteEndpoint(TestCase):
         self.client.login(username="testuser", password="testpass123")
         # Clear cache before each test to avoid interference
         from django.core.cache import cache
+
         cache.clear()
 
     def test_missing_youtube_link(self):
@@ -109,11 +110,16 @@ class TestGenerateNoteEndpoint(TestCase):
 
     @patch("note_generator.transcript_utils.get_transcript_with_diagnostics")
     @patch("note_generator.views.yt_title")
-    def test_transcript_fetch_403_blocked(self, mock_yt_title, mock_get_transcript_diag):
+    def test_transcript_fetch_403_blocked(
+        self, mock_yt_title, mock_get_transcript_diag
+    ):
         """Simulate YouTube blocking with HTTP 403."""
         mock_yt_title.return_value = "Test Video"
         # Mock the diagnostics function to return error
-        mock_get_transcript_diag.return_value = (None, YouTubeBlockedError("HTTP 403 Forbidden"))
+        mock_get_transcript_diag.return_value = (
+            None,
+            YouTubeBlockedError("HTTP 403 Forbidden"),
+        )
 
         response = self.client.post(
             "/generate-notes",
@@ -133,7 +139,10 @@ class TestGenerateNoteEndpoint(TestCase):
     ):
         """Simulate rate limiting with HTTP 429."""
         mock_yt_title.return_value = "Test Video"
-        mock_get_transcript_diag.return_value = (None, YouTubeBlockedError("HTTP 429 Too Many Requests"))
+        mock_get_transcript_diag.return_value = (
+            None,
+            YouTubeBlockedError("HTTP 429 Too Many Requests"),
+        )
 
         response = self.client.post(
             "/generate-notes",

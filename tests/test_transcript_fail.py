@@ -21,7 +21,7 @@ class TranscriptFailureTest(TestCase):
     def test_transcript_missing_returns_502(self, _gen, _title, _transcript_diag):
         # Mock the function to return None transcript with error
         _transcript_diag.return_value = (None, NoTranscriptError())
-        
+
         url = reverse("generate-notes")
         resp = self.client.post(
             url,

@@ -149,7 +149,9 @@ def get_transcript_with_diagnostics(
             error = NoTranscriptError()
         elif "yt-dlp failed" in error_str or "youtube" in error_str:
             # Audio download failed (likely YouTube blocking or video unavailable)
-            error = YouTubeBlockedError("YouTube download failed - video may be restricted")
+            error = YouTubeBlockedError(
+                "YouTube download failed - video may be restricted"
+            )
         else:
             # Generic error - still report as YouTube blocked since we can't fetch
             error = YouTubeBlockedError("Failed to fetch video")
