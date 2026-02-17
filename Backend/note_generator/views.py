@@ -146,33 +146,83 @@ def get_mp3_transcript(mp3_path: str) -> str:
 @login_required
 @csrf_exempt
 def generate_note(request):
-    if request.method == "POST":
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        yt_link_raw = data.get("link", "")
         try:
-            data = json.loads(request.body)
-            yt_link_raw = data.get("link", "")
-            try:
-                yt_link = normalize_youtube_url(yt_link_raw)
-            except ValueError as e:
-                return JsonResponse({"error": str(e)}, status=400)
-        except (KeyError, json.JSONDecodeError):
-            return JsonResponse({"error": "Invalid data sent"}, status=400)
+            yt_link = normalize_youtube_url(yt_link_raw)
+        except ValueError as e:
+            return JsonResponse(
+                {
+                    "error_code": "invalid_url",
+                    "message": str(e),
+                },
+                status=400,
+            )
+    except (KeyError, json.JSONDecodeError):
+        return JsonResponse(
+            {"error_code": "invalid_request", "message": "Invalid data sent"},
+            status=400,
+        )
 
-        # get yt title
+    # Get title (non-critical)
+    try:
         title = yt_title(yt_link)
+    except Exception as e:
+        logger.warning(f"Could not fetch title for {yt_link}: {e}")
+        title = f"YouTube Note ({yt_link[:50]})"
 
-        # get transcript
-        transcription = get_transcript(yt_link)
-        if not transcription:
-            return JsonResponse({"error": " Failed to get transcript"}, status=500)
+    # Get transcript with caching and error handling
+    from note_generator.transcript_utils import get_transcript_with_diagnostics
 
-        # use OpenAI to generate the ai notes
-        note_content = generate_blog_from_transcription(transcription)
+    transcript, transcript_error = get_transcript_with_diagnostics(
+        yt_link, get_transcript
+    )
+
+    if transcript_error:
+        return JsonResponse(
+            {
+                "error_code": transcript_error.error_code,
+                "message": transcript_error.message,
+            },
+            status=transcript_error.http_status,
+        )
+
+    if not transcript:
+        return JsonResponse(
+            {
+                "error_code": "no_transcript",
+                "message": "Transcript unavailable. Try MP3 upload or paste transcript.",
+            },
+            status=502,
+        )
+
+    # Generate notes
+    try:
+        note_content = generate_blog_from_transcription(transcript)
         if not note_content:
             return JsonResponse(
-                {"error": " Failed to generate blog article"}, status=500
+                {
+                    "error_code": "generation_failed",
+                    "message": "Failed to generate notes. Please try again.",
+                },
+                status=500,
             )
+    except Exception as e:
+        logger.exception(f"Note generation failed: {e}")
+        return JsonResponse(
+            {
+                "error_code": "generation_failed",
+                "message": "Note generation service temporarily unavailable.",
+            },
+            status=503,
+        )
 
-        # save notes to db
+    # Save to database
+    try:
         new_note = NotePost.objects.create(
             user=request.user,
             youtube_title=title,
@@ -181,14 +231,19 @@ def generate_note(request):
         )
         new_note.save()
 
-        # invalidate cahced list for this user
+        # Invalidate cache
         cache.delete(f"notes:list:user:{request.user.id}")
 
-        # return ai made notes as a response
         return JsonResponse({"content": note_content})
-
-    else:
-        return JsonResponse({"error": "Invalid request method"}, status=405)
+    except Exception as e:
+        logger.exception(f"Failed to save note: {e}")
+        return JsonResponse(
+            {
+                "error_code": "save_failed",
+                "message": "Could not save notes. Please try again.",
+            },
+            status=500,
+        )
 
 
 @login_required

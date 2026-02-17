@@ -189,15 +189,26 @@
 
           const data = await response.json();
 
-          if (data.error) {
-            alert('Error: ' + data.error);
+          if (data.error_code || data.error) {
+            const errorMessage = data.message || data.error;
+            const errorCode = data.error_code || 'unknown_error';
+            
+            // Provide helpful fallback message
+            let userMessage = errorMessage;
+            if (errorCode === 'youtube_blocked') {
+              userMessage = `${errorMessage}\n\n💡 Tip: Try uploading an MP3 file instead on the "Upload MP3" tab.`;
+            } else if (errorCode === 'no_transcript') {
+              userMessage = `${errorMessage}\n\n💡 Tip: Switch to the "Upload MP3" tab to upload an MP3 file.`;
+            }
+            
+            blogContent.innerHTML = `<p style="color: #ff6b6b; white-space: pre-wrap;">${userMessage}</p>`;
           } else {
             blogContent.innerHTML = data.content;
           }
 
         } catch (error) {
           console.error("Error occurred:", error);
-          alert("Something went wrong. Please try again later.");
+          blogContent.innerHTML = '<p style="color: #ff6b6b;">Network error. Please check your connection and try again.</p>';
         }
 
         document.getElementById('loading-circle').style.display = 'none';
