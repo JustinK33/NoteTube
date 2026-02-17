@@ -6,8 +6,8 @@ import pytest
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from unittest.mock import patch, MagicMock
-from Backend.note_generator.views import generate_note
-from Backend.note_generator.transcript_utils import (
+from note_generator.views import generate_note
+from note_generator.transcript_utils import (
     TranscriptFetchError,
     YouTubeBlockedError,
     NoTranscriptError,
@@ -83,6 +83,9 @@ class TestGenerateNoteEndpoint(TestCase):
         )
         self.client = Client()
         self.client.login(username="testuser", password="testpass123")
+        # Clear cache before each test to avoid interference
+        from django.core.cache import cache
+        cache.clear()
 
     def test_missing_youtube_link(self):
         response = self.client.post(
@@ -104,12 +107,13 @@ class TestGenerateNoteEndpoint(TestCase):
         data = response.json()
         assert data["error_code"] == "invalid_url"
 
-    @patch("note_generator.views.get_transcript")
+    @patch("note_generator.transcript_utils.get_transcript_with_diagnostics")
     @patch("note_generator.views.yt_title")
-    def test_transcript_fetch_403_blocked(self, mock_yt_title, mock_get_transcript):
+    def test_transcript_fetch_403_blocked(self, mock_yt_title, mock_get_transcript_diag):
         """Simulate YouTube blocking with HTTP 403."""
         mock_yt_title.return_value = "Test Video"
-        mock_get_transcript.side_effect = Exception("HTTP 403: Forbidden")
+        # Mock the diagnostics function to return error
+        mock_get_transcript_diag.return_value = (None, YouTubeBlockedError("HTTP 403 Forbidden"))
 
         response = self.client.post(
             "/generate-notes",
@@ -122,14 +126,14 @@ class TestGenerateNoteEndpoint(TestCase):
         assert data["error_code"] == "youtube_blocked"
         assert "Try MP3 upload" in data["message"]
 
-    @patch("note_generator.views.get_transcript")
+    @patch("note_generator.transcript_utils.get_transcript_with_diagnostics")
     @patch("note_generator.views.yt_title")
     def test_transcript_fetch_429_rate_limited(
-        self, mock_yt_title, mock_get_transcript
+        self, mock_yt_title, mock_get_transcript_diag
     ):
         """Simulate rate limiting with HTTP 429."""
         mock_yt_title.return_value = "Test Video"
-        mock_get_transcript.side_effect = Exception("HTTP 429: Too Many Requests")
+        mock_get_transcript_diag.return_value = (None, YouTubeBlockedError("HTTP 429 Too Many Requests"))
 
         response = self.client.post(
             "/generate-notes",
@@ -141,12 +145,12 @@ class TestGenerateNoteEndpoint(TestCase):
         data = response.json()
         assert data["error_code"] == "youtube_blocked"
 
-    @patch("note_generator.views.get_transcript")
+    @patch("note_generator.transcript_utils.get_transcript_with_diagnostics")
     @patch("note_generator.views.yt_title")
-    def test_transcript_none_no_captions(self, mock_yt_title, mock_get_transcript):
+    def test_transcript_none_no_captions(self, mock_yt_title, mock_get_transcript_diag):
         """Simulate video with no captions."""
         mock_yt_title.return_value = "Test Video"
-        mock_get_transcript.return_value = None
+        mock_get_transcript_diag.return_value = (None, NoTranscriptError())
 
         response = self.client.post(
             "/generate-notes",
