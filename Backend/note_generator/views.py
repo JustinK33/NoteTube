@@ -314,7 +314,9 @@ def note_edit(request, pk):
         return redirect("saved-notes")
 
     if request.method == "POST":
-        new_title = request.POST.get("youtube_title", "").strip() or note_post.youtube_title
+        new_title = (
+            request.POST.get("youtube_title", "").strip() or note_post.youtube_title
+        )
         new_content = request.POST.get("generated_content", "").strip()
 
         if not new_content:

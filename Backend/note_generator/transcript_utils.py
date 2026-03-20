@@ -162,8 +162,12 @@ def get_transcript_with_diagnostics(
             error = YouTubeBlockedError("CAPTCHA required")
         elif "not available" in error_str or "no captions" in error_str:
             error = NoTranscriptError()
-        elif "network error" in error_str or "please check your connection" in error_str:
-            error = YouTubeBlockedError("Network blocked by YouTube - likely bot detection")
+        elif (
+            "network error" in error_str or "please check your connection" in error_str
+        ):
+            error = YouTubeBlockedError(
+                "Network blocked by YouTube - likely bot detection"
+            )
         elif "yt-dlp failed" in error_str or "youtube" in error_str:
             # Audio download failed (likely YouTube blocking or video unavailable)
             error = YouTubeBlockedError(

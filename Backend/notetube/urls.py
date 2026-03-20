@@ -28,7 +28,9 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path(
         "favicon.ico",
-        RedirectView.as_view(url=static_url("images/NoteTube-logo.png"), permanent=False),
+        RedirectView.as_view(
+            url=static_url("images/NoteTube-logo.png"), permanent=False
+        ),
     ),
 ]
 
