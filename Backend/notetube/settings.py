@@ -31,7 +31,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = True
-DEBUG = os.getenv("DEBUG", "false").lower() == "true"  # for prod
+# Default to debug locally; set DEBUG=false explicitly in production.
+DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv(
     "ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,web,54.167.105.59"
@@ -191,6 +192,10 @@ CSRF_TRUSTED_ORIGINS = os.getenv(
     "http://localhost:8000,http://127.0.0.1:8000,http://0.0.0.0:8000",
 ).split(",")
 
+# Optional cookie file for yt-dlp to improve access to restricted YouTube content.
+# Example: YTDLP_COOKIES_FILE=/Users/you/Projects/NoteTube/www.youtube.com_cookies.txt
+YTDLP_COOKIES_FILE = os.getenv("YTDLP_COOKIES_FILE", "").strip()
+
 # redis caching
 CACHES = {
     "default": {
@@ -198,6 +203,7 @@ CACHES = {
         "LOCATION": os.getenv("REDIS_URL"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "IGNORE_EXCEPTIONS": True,
         },
     }
 }

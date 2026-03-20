@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Note</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="{% static 'images/NoteTube-logo.png' %}?v=3">
+</head>
+
+<body class="min-h-screen bg-[#0b0b10] text-white font-sans antialiased overflow-x-hidden">
+
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-[radial-gradient(1200px_700px_at_80%_10%,rgba(109,40,255,0.30),transparent_60%),radial-gradient(900px_600px_at_20%_80%,rgba(58,130,255,0.18),transparent_60%),radial-gradient(900px_600px_at_10%_20%,rgba(210,60,255,0.12),transparent_60%),linear-gradient(180deg,#05050a_0%,#0b0b10_45%,#04040a_100%)]"></div>
+    <div class="absolute inset-0 opacity-[0.06] bg-[radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(1000px_700px_at_50%_40%,transparent_45%,rgba(0,0,0,0.65)_95%)]"></div>
+  </div>
+
+  <nav class="sticky top-4 z-20">
+    <div class="mx-auto max-w-6xl px-4">
+      <div class="flex items-center justify-between rounded-2xl border border-white/15 bg-black/30 px-4 py-3 shadow-2xl backdrop-blur-xl">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center overflow-hidden">
+            <img src="{% static 'images/NoteTube-logo.png' %}?v=3" class="h-7 w-7" alt="NoteTube">
+          </div>
+          <h1 class="text-xl font-semibold tracking-tight"><a href="/" class="hover:opacity-90">NoteTube</a></h1>
+        </div>
+
+        <div class="flex items-center gap-4 text-sm text-white/75">
+          <a href="/saved-notes" class="hover:text-white transition-colors">Saved Notes</a>
+          <div class="h-4 w-px bg-white/10"></div>
+          <a href="{% url 'logout' %}" class="hover:text-white transition-colors">Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="mx-auto max-w-6xl px-4 py-10">
+    <div class="max-w-4xl mx-auto rounded-[2rem] border border-white/15 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-semibold tracking-tight">Edit Note</h2>
+          <p class="mt-1 text-sm text-white/55">Make manual changes to your saved notes.</p>
+        </div>
+        <a href="{% url 'note-details' note_post.id %}"
+           class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 transition-colors">
+          Back
+        </a>
+      </div>
+
+      {% if messages %}
+        <div class="mt-6 space-y-2">
+          {% for message in messages %}
+            <div class="rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white/90">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" class="mt-6 space-y-5">
+        {% csrf_token %}
+
+        <div>
+          <label for="youtube_title" class="block text-sm font-medium text-white/80 mb-2">Title</label>
+          <input
+            id="youtube_title"
+            name="youtube_title"
+            type="text"
+            value="{{ note_post.youtube_title }}"
+            class="w-full h-12 rounded-2xl bg-black/20 border border-white/15 px-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60"
+          />
+        </div>
+
+        <div>
+          <label for="generated_content" class="block text-sm font-medium text-white/80 mb-2">Note Content</label>
+          <textarea
+            id="generated_content"
+            name="generated_content"
+            rows="16"
+            class="w-full rounded-2xl bg-black/20 border border-white/15 p-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60 whitespace-pre-wrap"
+          >{{ note_post.generated_content }}</textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-3">
+          <a href="{% url 'note-details' note_post.id %}"
+             class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15 transition-colors">
+            Cancel
+          </a>
+          <button
+            type="submit"
+            class="inline-flex items-center rounded-full border border-[#6d28ff]/50 bg-[#6d28ff] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+          >
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</body>
+</html>

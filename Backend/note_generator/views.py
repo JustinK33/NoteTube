@@ -4,17 +4,22 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from fastapi import HTTPException
-import json, os
+import json, os, time
 from pytubefix import YouTube
 import assemblyai as aai
 import openai
 from .models import NotePost
 import traceback
 import tempfile
-from note_generator.utils.cache_utils import cached_get_or_set
+from note_generator.utils.cache_utils import (
+    cached_get_or_set,
+    safe_cache_get,
+    safe_cache_set,
+    safe_cache_delete,
+)
 from django.core.cache import cache
 import re
 import logging
@@ -22,6 +27,12 @@ import subprocess
 from fastapi.responses import FileResponse
 import tempfile
 import shutil
+from youtube_transcript_api import YouTubeTranscriptApi
+from django.utils.text import slugify
+from io import BytesIO
+from textwrap import wrap
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 aai.settings.api_key = os.getenv("APIKEY")
 
@@ -113,7 +124,7 @@ def mp3_to_notes(request):
             shutil.rmtree(temp_dir)
 
             # Invalidate cached list for this user
-            cache.delete(f"notes:list:user:{request.user.id}")
+            safe_cache_delete(f"notes:list:user:{request.user.id}")
 
             # Return generated notes as response
             return JsonResponse({"content": note_content})
@@ -148,6 +159,22 @@ def get_mp3_transcript(mp3_path: str) -> str:
 def generate_note(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    # Rate limiting: 10 minutes between requests
+    rate_limit_key = f"rate_limit:user:{request.user.id}"
+    last_request = safe_cache_get(rate_limit_key)
+    if last_request:
+        remaining = 600 - (time.time() - last_request)
+        if remaining > 0:
+            minutes = int(remaining // 60)
+            seconds = int(remaining % 60)
+            return JsonResponse(
+                {
+                    "error_code": "rate_limited",
+                    "message": f"Please wait {minutes}m {seconds}s before generating another note.",
+                },
+                status=429,
+            )
 
     try:
         data = json.loads(request.body)
@@ -232,7 +259,10 @@ def generate_note(request):
         new_note.save()
 
         # Invalidate cache
-        cache.delete(f"notes:list:user:{request.user.id}")
+        safe_cache_delete(f"notes:list:user:{request.user.id}")
+
+        # Set rate limit (10 minutes)
+        safe_cache_set(rate_limit_key, time.time(), timeout=600)
 
         return JsonResponse({"content": note_content})
     except Exception as e:
@@ -276,10 +306,120 @@ def note_details(request, pk):
     return render(request, "note_details.html", {"note_post_detail": note_post_detail})
 
 
+@login_required
+def note_edit(request, pk):
+    try:
+        note_post = NotePost.objects.get(id=pk, user=request.user)
+    except NotePost.DoesNotExist:
+        return redirect("saved-notes")
+
+    if request.method == "POST":
+        new_title = request.POST.get("youtube_title", "").strip() or note_post.youtube_title
+        new_content = request.POST.get("generated_content", "").strip()
+
+        if not new_content:
+            messages.error(request, "Note content cannot be empty")
+            return render(request, "note_edit.html", {"note_post": note_post})
+
+        note_post.youtube_title = new_title
+        note_post.generated_content = new_content
+        note_post.save(update_fields=["youtube_title", "generated_content"])
+
+        # Invalidate related caches after manual edits.
+        safe_cache_delete(f"notes:list:user:{request.user.id}")
+        safe_cache_delete(f"notes:detail:user:{request.user.id}:pk:{pk}")
+
+        messages.success(request, "Note updated successfully")
+        return redirect("note-details", pk=pk)
+
+    return render(request, "note_edit.html", {"note_post": note_post})
+
+
+@login_required
+def note_export(request, pk):
+    try:
+        note_post = NotePost.objects.get(id=pk, user=request.user)
+    except NotePost.DoesNotExist:
+        return redirect("saved-notes")
+
+    export_format = (request.GET.get("format") or "txt").lower()
+    if export_format not in {"txt", "md", "pdf"}:
+        export_format = "txt"
+
+    safe_title = slugify(note_post.youtube_title) or f"note-{pk}"
+    created_display = note_post.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+    if export_format == "md":
+        body = (
+            f"# {note_post.youtube_title}\n\n"
+            f"- Created: {created_display}\n"
+            f"- Source: {note_post.youtube_link or 'N/A'}\n\n"
+            f"## Notes\n\n{note_post.generated_content}\n"
+        )
+        content_type = "text/markdown; charset=utf-8"
+        filename = f"{safe_title}.md"
+        response = HttpResponse(body, content_type=content_type)
+    elif export_format == "txt":
+        body = (
+            f"Title: {note_post.youtube_title}\n"
+            f"Created: {created_display}\n"
+            f"Source: {note_post.youtube_link or 'N/A'}\n"
+            f"\n---\n\n"
+            f"{note_post.generated_content}\n"
+        )
+        content_type = "text/plain; charset=utf-8"
+        filename = f"{safe_title}.txt"
+        response = HttpResponse(body, content_type=content_type)
+    elif export_format == "pdf":
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        y = height - 50
+
+        # Header
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(50, y, note_post.youtube_title)
+        y -= 24
+
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(50, y, f"Created: {created_display}")
+        y -= 14
+        pdf.drawString(50, y, f"Source: {note_post.youtube_link or 'N/A'}")
+        y -= 24
+
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.drawString(50, y, "Notes")
+        y -= 18
+
+        pdf.setFont("Helvetica", 10)
+        for paragraph in note_post.generated_content.splitlines() or [""]:
+            wrapped_lines = wrap(paragraph, width=105) or [""]
+            for line in wrapped_lines:
+                if y < 50:
+                    pdf.showPage()
+                    pdf.setFont("Helvetica", 10)
+                    y = height - 50
+                pdf.drawString(50, y, line)
+                y -= 13
+            y -= 4
+
+        pdf.save()
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+        filename = f"{safe_title}.pdf"
+
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
 def yt_title(link):
-    yt = YouTube(link)
-    title = yt.title
-    return title
+    try:
+        yt = YouTube(link)
+        title = yt.title
+        return title
+    except Exception as e:
+        logger.warning(f"yt_title failed: {e}")
+        raise
 
 
 import subprocess, tempfile, os, glob
@@ -288,19 +428,29 @@ import subprocess, tempfile, os, glob
 def download_audio(link: str) -> str:
     tmpdir = tempfile.gettempdir()
     outtmpl = os.path.join(tmpdir, "%(id)s.%(ext)s")
+    cookies_file = (getattr(settings, "YTDLP_COOKIES_FILE", "") or "").strip()
 
     # downloads best audio; yt-dlp chooses an audio container (webm/m4a usually)
     cmd = [
         "yt-dlp",
-        "-f",
-        "bestaudio",
+        "--user-agent",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "-o",
         outtmpl,
         link,
     ]
 
+    if cookies_file:
+        if os.path.isfile(cookies_file):
+            cmd[1:1] = ["--cookies", cookies_file]
+            logger.info(f"yt-dlp cookies enabled from: {cookies_file}")
+        else:
+            logger.warning(f"YTDLP_COOKIES_FILE not found: {cookies_file}")
+
+    logger.info(f"Running yt-dlp: {' '.join(cmd)}")
     res = subprocess.run(cmd, capture_output=True, text=True)
     if res.returncode != 0:
+        logger.error(f"yt-dlp failed: {res.stderr}")
         raise RuntimeError(
             f"yt-dlp failed:\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}"
         )
@@ -317,6 +467,20 @@ def download_audio(link: str) -> str:
 
 # we gon use assembly ai to get the transcription
 def get_transcript(link):
+    # Prefer native caption transcript first; this avoids yt-dlp for many videos.
+    try:
+        video_match = re.search(r"[?&]v=([0-9A-Za-z_-]{11})", link)
+        video_id = video_match.group(1) if video_match else None
+        if video_id:
+            transcript_data = YouTubeTranscriptApi().fetch(video_id)
+            transcript_text = " ".join(
+                chunk.text.strip() for chunk in transcript_data
+            ).strip()
+            if transcript_text:
+                return transcript_text
+    except Exception as e:
+        logger.warning(f"YouTubeTranscriptApi failed, falling back to yt-dlp: {e}")
+
     audio_file = download_audio(link)
     try:
         transcriber = aai.Transcriber()

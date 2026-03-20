@@ -52,6 +52,7 @@
           <a href="{% url 'note-details' post.id %}" class="block">
             <div class="rounded-2xl border border-white/10 bg-black/20 p-5 hover:bg-white/5 transition-colors">
               <h3 class="text-lg font-semibold text-white/90">{{ post.youtube_title }}</h3>
+              <p class="mt-1 text-xs text-white/45">Created {{ post.created_at|date:"M d, Y \a\t g:i A" }}</p>
               <p class="mt-2 text-sm text-white/65">{{ post.generated_content|truncatechars:120 }}</p>
               <div class="mt-4 text-xs text-white/45">Open →</div>
             </div>

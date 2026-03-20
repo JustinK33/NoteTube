@@ -11,4 +11,6 @@ urlpatterns = [
     path("mp3-to-notes", views.mp3_to_notes, name="mp3-to-notes"),
     path("saved-notes", views.note_list, name="saved-notes"),
     path("note-details/<int:pk>/", views.note_details, name="note-details"),
+    path("note-edit/<int:pk>/", views.note_edit, name="note-edit"),
+    path("note-export/<int:pk>/", views.note_export, name="note-export"),
 ]

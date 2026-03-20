@@ -10,6 +10,21 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 
+def _safe_cache_get(key: str, default=None):
+    try:
+        return cache.get(key, default)
+    except Exception as e:
+        logger.warning(f"Cache get failed for key {key}: {e}")
+        return default
+
+
+def _safe_cache_set(key: str, value, timeout: int):
+    try:
+        cache.set(key, value, timeout=timeout)
+    except Exception as e:
+        logger.warning(f"Cache set failed for key {key}: {e}")
+
+
 class TranscriptFetchError(Exception):
     """Base exception for transcript fetch errors."""
 
@@ -91,7 +106,7 @@ def get_transcript_with_diagnostics(
     cache_key = f"transcript:video:{video_id}"
 
     # Check if transcript is cached
-    cached = cache.get(cache_key)
+    cached = _safe_cache_get(cache_key)
     if cached is not None:
         if isinstance(cached, str) and cached:
             # Return cached transcript
@@ -115,7 +130,7 @@ def get_transcript_with_diagnostics(
         if not transcript_text:
             error = NoTranscriptError()
             # Cache the failure for 1 hour to reduce retries
-            cache.set(
+            _safe_cache_set(
                 cache_key,
                 {
                     "is_error": True,
@@ -131,7 +146,7 @@ def get_transcript_with_diagnostics(
             return None, error
 
         # Cache success
-        cache.set(cache_key, transcript_text, timeout=timeout)
+        _safe_cache_set(cache_key, transcript_text, timeout=timeout)
         logger.info(f"Successfully cached transcript for video {video_id}")
         return transcript_text, None
 
@@ -147,6 +162,8 @@ def get_transcript_with_diagnostics(
             error = YouTubeBlockedError("CAPTCHA required")
         elif "not available" in error_str or "no captions" in error_str:
             error = NoTranscriptError()
+        elif "network error" in error_str or "please check your connection" in error_str:
+            error = YouTubeBlockedError("Network blocked by YouTube - likely bot detection")
         elif "yt-dlp failed" in error_str or "youtube" in error_str:
             # Audio download failed (likely YouTube blocking or video unavailable)
             error = YouTubeBlockedError(
@@ -157,7 +174,7 @@ def get_transcript_with_diagnostics(
             error = YouTubeBlockedError("Failed to fetch video")
 
         # Cache the error for 10 minutes to reduce retries on rate limits
-        cache.set(
+        _safe_cache_set(
             cache_key,
             {
                 "is_error": True,

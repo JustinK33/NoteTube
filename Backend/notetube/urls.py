@@ -19,11 +19,17 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic.base import RedirectView
+from django.templatetags.static import static as static_url
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("note_generator.urls")),
     path("accounts/", include("allauth.urls")),
+    path(
+        "favicon.ico",
+        RedirectView.as_view(url=static_url("images/NoteTube-logo.png"), permanent=False),
+    ),
 ]
 
 urlpatterns = urlpatterns + static(
