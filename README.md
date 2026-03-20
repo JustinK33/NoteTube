@@ -29,6 +29,7 @@ An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (m
   - Authenticated users can:
     - Sign up / log in
     - Create notes with AI
+    - Edit and export notes
 
 - **API-Chain Pipeline**
   - Turn YouTube videos into transcripts via AssemblyAI.
