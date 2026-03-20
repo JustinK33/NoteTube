@@ -1,12 +1,14 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 import json
 
 
 class NoteGenerationTest(TestCase):
     def setUp(self):
         self.client = Client()
+        cache.clear()
 
         # 🔥 ADD THIS
         User = get_user_model()
