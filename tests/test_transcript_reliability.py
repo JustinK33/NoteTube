@@ -6,7 +6,6 @@ import pytest
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from unittest.mock import patch, MagicMock
-from note_generator.views import generate_note
 from note_generator.transcript_utils import (
     TranscriptFetchError,
     YouTubeBlockedError,
