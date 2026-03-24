@@ -4,6 +4,10 @@ An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (m
 
 [![CI](https://github.com/JustinK33/NoteTube/actions/workflows/ci.yml/badge.svg)](https://github.com/JustinK33/NoteTube/actions/workflows/ci.yml)
 
+<p align="center">
+  <img src="NoteTube.png" alt="Architecture Diagram" width="800"/>
+</p>
+
 ---
 
 ## Tech Stack
