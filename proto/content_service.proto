@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package content.v1;
+
+service ContentService {
+  rpc ProcessTranscript(ProcessTranscriptRequest) returns (ProcessTranscriptResponse);
+}
+
+message ProcessTranscriptRequest {
+  string transcript_text = 1;
+  string source_url = 2;
+  string title = 3;
+  int32 max_sections = 4;
+}
+
+message NoteSection {
+  string heading = 1;
+  repeated string bullets = 2;
+}
+
+message ProcessTranscriptResponse {
+  string summary = 1;
+  repeated NoteSection sections = 2;
+  int32 chunk_count = 3;
+  string status = 4;
+  string error_message = 5;
+}

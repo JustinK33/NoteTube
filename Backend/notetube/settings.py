@@ -207,3 +207,9 @@ CACHES = {
         },
     }
 }
+
+# gRPC content-service settings (sync request/response)
+CONTENT_SERVICE_HOST = os.getenv("CONTENT_SERVICE_HOST", "content-service")
+CONTENT_SERVICE_PORT = int(os.getenv("CONTENT_SERVICE_PORT", "50051"))
+CONTENT_SERVICE_TIMEOUT = float(os.getenv("CONTENT_SERVICE_TIMEOUT", "10"))
+CONTENT_SERVICE_RETRIES = int(os.getenv("CONTENT_SERVICE_RETRIES", "1"))

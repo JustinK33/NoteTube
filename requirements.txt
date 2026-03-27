@@ -20,3 +20,5 @@ black
 pytest-django
 pytest
 pytest-cov
+grpcio
+protobuf

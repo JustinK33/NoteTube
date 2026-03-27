@@ -33,6 +33,7 @@ from io import BytesIO
 from textwrap import wrap
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from note_generator.grpc_client import process_transcript_via_grpc
 
 aai.settings.api_key = os.getenv("APIKEY")
 
@@ -227,9 +228,13 @@ def generate_note(request):
             status=502,
         )
 
-    # Generate notes
+    # Generate notes via gRPC content-service with fallback to local generation.
     try:
-        note_content = generate_blog_from_transcription(transcript)
+        note_content = process_transcript_via_grpc(
+            transcript_text=transcript,
+            source_url=yt_link,
+            title=title,
+        )
         if not note_content:
             return JsonResponse(
                 {
@@ -239,14 +244,20 @@ def generate_note(request):
                 status=500,
             )
     except Exception as e:
-        logger.exception(f"Note generation failed: {e}")
-        return JsonResponse(
-            {
-                "error_code": "generation_failed",
-                "message": "Note generation service temporarily unavailable.",
-            },
-            status=503,
-        )
+        logger.warning(f"gRPC note generation failed, falling back to local OpenAI path: {e}")
+        try:
+            note_content = generate_blog_from_transcription(transcript)
+            if not note_content:
+                raise RuntimeError("empty local generation result")
+        except Exception as fallback_error:
+            logger.exception(f"Note generation failed after fallback: {fallback_error}")
+            return JsonResponse(
+                {
+                    "error_code": "generation_failed",
+                    "message": "Note generation service temporarily unavailable.",
+                },
+                status=503,
+            )
 
     # Save to database
     try:

@@ -2,6 +2,9 @@ services:
   web:
     build: .
     env_file: .env
+    environment:
+      CONTENT_SERVICE_HOST: content-service
+      CONTENT_SERVICE_PORT: 50051
     expose:
       - "8000"
     ports:
@@ -9,6 +12,18 @@ services:
     volumes:
       - static_data:/vol/static
       - ./www.youtube.com_cookies.txt:/app/www.youtube.com_cookies.txt:ro
+    depends_on:
+      - content-service
+
+  content-service:
+    build:
+      context: .
+      dockerfile: content-service/Dockerfile
+    environment:
+      CONTENT_SERVICE_PORT: 50051
+      LOG_LEVEL: INFO
+    expose:
+      - "50051"
 
   nginx:
     image: nginx:alpine
