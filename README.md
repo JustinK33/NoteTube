@@ -15,6 +15,7 @@ An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (m
 - Python
 - Django
 - Nginx
+- gRPC
 - k6
 - AWS EC2
 - PostgreSQL
@@ -50,6 +51,10 @@ An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (m
 - **Deployment via AWS EC2 instance**
   Deployed and configured EC2 instance for hosting a web application
 
+- **gRPC service to service communcation framework**
+  Connected main django backend to content service
+  Also learned how to work with microservice structures
+
 - **Integrated Continuous Integration**
   Implemented GitHub action workflows for continuous integration and continuous delivery
    
@@ -64,9 +69,6 @@ An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (m
 
 - **API-Chain Pipeline**
   I Learned how to chain API outputs into inputs by feeding AssemblyAI transcripts into OpenAI to produce clean, structured notes.
-
-- **OAuth for 3rd party account authorization**
-  I learned how to integrate OAuth into a Django web app via AllAuth (Google OAuth) for enhanced security and convenience.
 
 ---
 
