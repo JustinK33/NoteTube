@@ -19,7 +19,6 @@ if str(REPO_ROOT) not in sys.path:
 from shared_proto.python import content_service_pb2
 from shared_proto.python import content_service_pb2_grpc
 
-
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
     format="%(asctime)s %(levelname)s [content-service] %(message)s",
@@ -29,7 +28,11 @@ logger = logging.getLogger(__name__)
 
 class ContentService(content_service_pb2_grpc.ContentServiceServicer):
     def ProcessTranscript(self, request, context):
-        logger.info("ProcessTranscript called title=%s source=%s", request.title, request.source_url)
+        logger.info(
+            "ProcessTranscript called title=%s source=%s",
+            request.title,
+            request.source_url,
+        )
 
         try:
             result = process_transcript(
@@ -69,7 +72,9 @@ class ContentService(content_service_pb2_grpc.ContentServiceServicer):
 def serve() -> None:
     port = int(os.getenv("CONTENT_SERVICE_PORT", "50051"))
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    content_service_pb2_grpc.add_ContentServiceServicer_to_server(ContentService(), server)
+    content_service_pb2_grpc.add_ContentServiceServicer_to_server(
+        ContentService(), server
+    )
     server.add_insecure_port(f"[::]:{port}")
 
     logger.info("Starting content-service on 0.0.0.0:%s", port)

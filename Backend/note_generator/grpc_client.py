@@ -10,7 +10,6 @@ from pathlib import Path
 import grpc
 from django.conf import settings
 
-
 # Ensure generated gRPC modules are importable when running from /Backend.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -18,7 +17,6 @@ if str(REPO_ROOT) not in sys.path:
 
 from shared_proto.python import content_service_pb2
 from shared_proto.python import content_service_pb2_grpc
-
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +70,9 @@ def process_transcript_via_grpc(
                 )
 
             if response.status and response.status.lower() != "ok":
-                raise RuntimeError(response.error_message or "content-service returned error")
+                raise RuntimeError(
+                    response.error_message or "content-service returned error"
+                )
 
             logger.info("content-service success chunks=%s", response.chunk_count)
             return _build_notes_text(response)

@@ -244,7 +244,9 @@ def generate_note(request):
                 status=500,
             )
     except Exception as e:
-        logger.warning(f"gRPC note generation failed, falling back to local OpenAI path: {e}")
+        logger.warning(
+            f"gRPC note generation failed, falling back to local OpenAI path: {e}"
+        )
         try:
             note_content = generate_blog_from_transcription(transcript)
             if not note_content:
