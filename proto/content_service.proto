@@ -4,6 +4,16 @@ package content.v1;
 
 service ContentService {
   rpc ProcessTranscript(ProcessTranscriptRequest) returns (ProcessTranscriptResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {
+  string caller = 1;
+}
+
+message HealthCheckResponse {
+  string status = 1;
+  string service = 2;
 }
 
 message ProcessTranscriptRequest {

@@ -1,0 +1,6 @@
+{
+  "ignore": [
+    "shared_proto/python/content_service_pb2.py",
+    "shared_proto/python/content_service_pb2_grpc.py"
+  ]
+}

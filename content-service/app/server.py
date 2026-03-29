@@ -68,6 +68,16 @@ class ContentService(content_service_pb2_grpc.ContentServiceServicer):
                 error_message=str(exc),
             )
 
+    def HealthCheck(self, request, context):
+        logger.info(
+            "HealthCheck called caller=%s",
+            request.caller,
+        )
+        return content_service_pb2.HealthCheckResponse(
+            status="healthy",
+            service="content-service",
+        )
+
 
 def serve() -> None:
     port = int(os.getenv("CONTENT_SERVICE_PORT", "50051"))

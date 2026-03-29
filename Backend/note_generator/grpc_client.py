@@ -89,3 +89,23 @@ def process_transcript_via_grpc(
                 time.sleep(0.5)
 
     raise RuntimeError(f"content-service unavailable: {last_error}")
+
+
+def health_check_via_grpc(caller="django-web"):
+    target = f"{getattr(settings, 'CONTENT_SERVICE_HOST', 'content-service')}:{getattr(settings, 'CONTENT_SERVICE_PORT', 50051)}"
+    timeout_seconds = float(getattr(settings, "CONTENT_SERVICE_TIMEOUT", 10))
+    request = content_service_pb2.HealthCheckRequest(
+        caller=caller,
+    )
+    try:
+        with grpc.insecure_channel(target) as channel:
+            stub = content_service_pb2_grpc.ContentServiceStub(channel)
+            response = stub.HealthCheck(
+                request,
+                timeout=timeout_seconds,
+                wait_for_ready=True,
+            )
+    except Exception as e:
+        raise RuntimeError(f"health check failed: {e}") from e
+
+    return (response.status, response.service)

@@ -20,7 +20,7 @@ _sym_db = _symbol_database.Default()
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n\x15\x63ontent_service.proto\x12\ncontent.v1"l\n\x18ProcessTranscriptRequest\x12\x17\n\x0ftranscript_text\x18\x01 \x01(\t\x12\x12\n\nsource_url\x18\x02 \x01(\t\x12\r\n\x05title\x18\x03 \x01(\t\x12\x14\n\x0cmax_sections\x18\x04 \x01(\x05"/\n\x0bNoteSection\x12\x0f\n\x07heading\x18\x01 \x01(\t\x12\x0f\n\x07\x62ullets\x18\x02 \x03(\t"\x93\x01\n\x19ProcessTranscriptResponse\x12\x0f\n\x07summary\x18\x01 \x01(\t\x12)\n\x08sections\x18\x02 \x03(\x0b\x32\x17.content.v1.NoteSection\x12\x13\n\x0b\x63hunk_count\x18\x03 \x01(\x05\x12\x0e\n\x06status\x18\x04 \x01(\t\x12\x15\n\rerror_message\x18\x05 \x01(\t2r\n\x0e\x43ontentService\x12`\n\x11ProcessTranscript\x12$.content.v1.ProcessTranscriptRequest\x1a%.content.v1.ProcessTranscriptResponseb\x06proto3'
+    b'\n\x15\x63ontent_service.proto\x12\ncontent.v1"$\n\x12HealthCheckRequest\x12\x0e\n\x06\x63\x61ller\x18\x01 \x01(\t"6\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0f\n\x07service\x18\x02 \x01(\t"l\n\x18ProcessTranscriptRequest\x12\x17\n\x0ftranscript_text\x18\x01 \x01(\t\x12\x12\n\nsource_url\x18\x02 \x01(\t\x12\r\n\x05title\x18\x03 \x01(\t\x12\x14\n\x0cmax_sections\x18\x04 \x01(\x05"/\n\x0bNoteSection\x12\x0f\n\x07heading\x18\x01 \x01(\t\x12\x0f\n\x07\x62ullets\x18\x02 \x03(\t"\x93\x01\n\x19ProcessTranscriptResponse\x12\x0f\n\x07summary\x18\x01 \x01(\t\x12)\n\x08sections\x18\x02 \x03(\x0b\x32\x17.content.v1.NoteSection\x12\x13\n\x0b\x63hunk_count\x18\x03 \x01(\x05\x12\x0e\n\x06status\x18\x04 \x01(\t\x12\x15\n\rerror_message\x18\x05 \x01(\t2\xc2\x01\n\x0e\x43ontentService\x12`\n\x11ProcessTranscript\x12$.content.v1.ProcessTranscriptRequest\x1a%.content.v1.ProcessTranscriptResponse\x12N\n\x0bHealthCheck\x12\x1e.content.v1.HealthCheckRequest\x1a\x1f.content.v1.HealthCheckResponseb\x06proto3'
 )
 
 _globals = globals()
@@ -28,12 +28,16 @@ _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "content_service_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
     DESCRIPTOR._loaded_options = None
-    _globals["_PROCESSTRANSCRIPTREQUEST"]._serialized_start = 37
-    _globals["_PROCESSTRANSCRIPTREQUEST"]._serialized_end = 145
-    _globals["_NOTESECTION"]._serialized_start = 147
-    _globals["_NOTESECTION"]._serialized_end = 194
-    _globals["_PROCESSTRANSCRIPTRESPONSE"]._serialized_start = 197
-    _globals["_PROCESSTRANSCRIPTRESPONSE"]._serialized_end = 344
-    _globals["_CONTENTSERVICE"]._serialized_start = 346
-    _globals["_CONTENTSERVICE"]._serialized_end = 460
+    _globals["_HEALTHCHECKREQUEST"]._serialized_start = 37
+    _globals["_HEALTHCHECKREQUEST"]._serialized_end = 73
+    _globals["_HEALTHCHECKRESPONSE"]._serialized_start = 75
+    _globals["_HEALTHCHECKRESPONSE"]._serialized_end = 129
+    _globals["_PROCESSTRANSCRIPTREQUEST"]._serialized_start = 131
+    _globals["_PROCESSTRANSCRIPTREQUEST"]._serialized_end = 239
+    _globals["_NOTESECTION"]._serialized_start = 241
+    _globals["_NOTESECTION"]._serialized_end = 288
+    _globals["_PROCESSTRANSCRIPTRESPONSE"]._serialized_start = 291
+    _globals["_PROCESSTRANSCRIPTRESPONSE"]._serialized_end = 438
+    _globals["_CONTENTSERVICE"]._serialized_start = 441
+    _globals["_CONTENTSERVICE"]._serialized_end = 635
 # @@protoc_insertion_point(module_scope)
