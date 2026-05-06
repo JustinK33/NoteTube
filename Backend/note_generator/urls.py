@@ -15,5 +15,9 @@ urlpatterns = [
     path("note-edit/<int:pk>/", views.note_edit, name="note-edit"),
     path("note-export/<int:pk>/", views.note_export, name="note-export"),
     path("notion-settings", views.notion_settings, name="notion-settings"),
-    path("note-export-notion/<int:pk>/", views.note_export_notion, name="note-export-notion"),
+    path(
+        "note-export-notion/<int:pk>/",
+        views.note_export_notion,
+        name="note-export-notion",
+    ),
 ]

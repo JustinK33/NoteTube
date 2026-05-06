@@ -48,8 +48,7 @@ def _chunk_text(text: str, limit: int = NOTION_TEXT_LIMIT) -> Iterable[str]:
 def _rich_text(content: str) -> list[dict]:
     """Wrap a plain string in Notion's rich-text JSON shape, splitting if too long."""
     return [
-        {"type": "text", "text": {"content": chunk}}
-        for chunk in _chunk_text(content)
+        {"type": "text", "text": {"content": chunk}} for chunk in _chunk_text(content)
     ]
 
 

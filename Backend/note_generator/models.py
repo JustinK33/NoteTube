@@ -15,9 +15,7 @@ class NotePost(models.Model):
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="profile"
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     notion_token = models.CharField(max_length=255, blank=True, default="")
     notion_parent_page_id = models.CharField(max_length=64, blank=True, default="")
 

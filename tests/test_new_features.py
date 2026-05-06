@@ -268,9 +268,7 @@ class ExportNoteToNotionTests(TestCase):
             source_url="https://yt.com/v/abc",
         )
         kwargs = mock_post.call_args.kwargs
-        self.assertEqual(
-            kwargs["headers"]["Authorization"], "Bearer secret"
-        )
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer secret")
         self.assertEqual(kwargs["json"]["parent"]["page_id"], "parent-123")
         # Source URL should be the first block.
         first_block = kwargs["json"]["children"][0]
