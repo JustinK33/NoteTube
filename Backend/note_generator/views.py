@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from fastapi import HTTPException
@@ -11,7 +11,7 @@ import json, os, time
 from pytubefix import YouTube
 import assemblyai as aai
 import openai
-from .models import NotePost
+from .models import NotePost, UserProfile
 import traceback
 import tempfile
 from note_generator.utils.cache_utils import (
@@ -34,6 +34,10 @@ from textwrap import wrap
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from note_generator.grpc_client import process_transcript_via_grpc
+from note_generator.utils.notion_export import (
+    export_note_to_notion,
+    NotionExportError,
+)
 
 aai.settings.api_key = os.getenv("APIKEY")
 
@@ -290,6 +294,65 @@ def generate_note(request):
 
 
 @login_required
+def notion_settings(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == "POST":
+        token = (request.POST.get("notion_token") or "").strip()
+        parent_id = (request.POST.get("notion_parent_page_id") or "").strip()
+
+        profile.notion_token = token
+        profile.notion_parent_page_id = parent_id
+        profile.save(update_fields=["notion_token", "notion_parent_page_id"])
+
+        if token and parent_id:
+            messages.success(request, "Notion settings saved.")
+        else:
+            messages.info(request, "Notion settings cleared.")
+
+        return redirect("notion-settings")
+
+    return render(request, "notion_settings.html", {"profile": profile})
+
+
+@login_required
+def note_create(request):
+    if request.method == "POST":
+        title = (request.POST.get("youtube_title") or "").strip()
+        content = (request.POST.get("generated_content") or "").strip()
+
+        if not title or not content:
+            messages.error(request, "Title and content are both required.")
+            return render(
+                request,
+                "note_create.html",
+                {"form_title": title, "form_content": content},
+            )
+
+        # CharField(max_length=300) is enforced at the DB level on PostgreSQL.
+        if len(title) > 300:
+            messages.error(request, "Title must be 300 characters or fewer.")
+            return render(
+                request,
+                "note_create.html",
+                {"form_title": title, "form_content": content},
+            )
+
+        new_note = NotePost.objects.create(
+            user=request.user,
+            youtube_title=title,
+            youtube_link="",
+            generated_content=content,
+        )
+
+        safe_cache_delete(f"notes:list:user:{request.user.id}")
+
+        return redirect("note-details", pk=new_note.pk)
+
+    return render(request, "note_create.html")
+
+
+@login_required
 def note_list(request):
     key = f"notes:list:user:{request.user.id}"
 
@@ -304,6 +367,7 @@ def note_list(request):
 
 
 @login_required
+@ensure_csrf_cookie
 def note_details(request, pk):
     key = f"notes:detail:user:{request.user.id}:pk:{pk}"
 
@@ -314,7 +378,7 @@ def note_details(request, pk):
             compute=lambda: NotePost.objects.get(id=pk, user=request.user),
         )
     except NotePost.DoesNotExist:
-        return redirect("/note-list")
+        return redirect("saved-notes")
 
     return render(request, "note_details.html", {"note_post_detail": note_post_detail})
 
@@ -425,6 +489,50 @@ def note_export(request, pk):
 
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+@login_required
+def note_export_notion(request, pk):
+    if request.method != "POST":
+        return JsonResponse(
+            {"error_code": "method_not_allowed", "message": "POST required"},
+            status=405,
+        )
+
+    try:
+        note_post = NotePost.objects.get(id=pk, user=request.user)
+    except NotePost.DoesNotExist:
+        return JsonResponse(
+            {"error_code": "not_found", "message": "Note not found"},
+            status=404,
+        )
+
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if not profile.has_notion_configured():
+        return JsonResponse(
+            {
+                "error_code": "notion_not_configured",
+                "message": "Connect Notion in settings before exporting.",
+            },
+            status=400,
+        )
+
+    try:
+        page_url = export_note_to_notion(
+            token=profile.notion_token,
+            parent_page_id=profile.notion_parent_page_id,
+            title=note_post.youtube_title,
+            content=note_post.generated_content,
+            source_url=note_post.youtube_link or "",
+        )
+    except NotionExportError as e:
+        logger.warning(f"Notion export failed for note {pk}: {e}")
+        return JsonResponse(
+            {"error_code": "notion_failed", "message": str(e)},
+            status=502,
+        )
+
+    return JsonResponse({"url": page_url})
 
 
 def yt_title(link):

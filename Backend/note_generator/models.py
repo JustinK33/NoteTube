@@ -12,3 +12,17 @@ class NotePost(models.Model):
 
     def __str__(self):
         return self.youtube_title
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="profile"
+    )
+    notion_token = models.CharField(max_length=255, blank=True, default="")
+    notion_parent_page_id = models.CharField(max_length=64, blank=True, default="")
+
+    def has_notion_configured(self) -> bool:
+        return bool(self.notion_token and self.notion_parent_page_id)
+
+    def __str__(self):
+        return f"Profile<{self.user.username}>"

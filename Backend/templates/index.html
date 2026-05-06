@@ -56,6 +56,7 @@
 
         <div class="flex items-center gap-4 text-sm text-white/75">
           <a href="/saved-notes" class="hover:text-white transition-colors">Saved Notes</a>
+          <a href="/notion-settings" class="hover:text-white transition-colors">Notion</a>
           <div class="h-4 w-px bg-white/10"></div>
           <a href="logout" class="hover:text-white transition-colors">Logout</a>
         </div>
@@ -76,17 +77,20 @@
 
       <div class="mt-8">
         <!-- Tab Buttons -->
-        <div class="flex gap-3 mb-6 border-b border-white/10">
-          <button id="youtubeTab" class="tab-button pb-3 px-1 font-semibold text-white/90 border-b-2 border-[#6d28ff] transition-colors active-tab">
+        <div class="flex gap-6 mb-6 border-b border-white/10">
+          <button data-tab="youtube" class="tab-button pb-3 px-1 font-semibold text-white/90 border-b-2 border-[#6d28ff] transition-colors">
             YouTube Link
           </button>
-          <button id="mp3Tab" class="tab-button pb-3 px-1 font-semibold text-white/50 border-b-2 border-transparent hover:text-white/70 transition-colors">
+          <button data-tab="mp3" class="tab-button pb-3 px-1 font-semibold text-white/50 border-b-2 border-transparent hover:text-white/70 transition-colors">
             Upload MP3
+          </button>
+          <button data-tab="manual" class="tab-button pb-3 px-1 font-semibold text-white/50 border-b-2 border-transparent hover:text-white/70 transition-colors">
+            Manual Note
           </button>
         </div>
 
         <!-- YouTube Tab Content -->
-        <div id="youtubeContent" class="tab-content">
+        <div data-tab-content="youtube" class="tab-content">
           <h2 class="text-xl font-semibold mb-4 text-white/90">Enter YouTube Video Link</h2>
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
             <input id="youtubeLink" type="url" placeholder="Paste YouTube Link..." class="flex-grow w-full h-12 rounded-2xl bg-black/20 border border-white/15 px-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60"/>
@@ -97,7 +101,7 @@
         </div>
 
         <!-- MP3 Tab Content -->
-        <div id="mp3Content" class="tab-content hidden">
+        <div data-tab-content="mp3" class="tab-content hidden">
           <h2 class="text-xl font-semibold mb-4 text-white/90">Upload MP3 File</h2>
           <div class="flex flex-col gap-4">
             <div>
@@ -122,6 +126,26 @@
           </div>
         </div>
 
+        <!-- Manual Note Tab Content -->
+        <div data-tab-content="manual" class="tab-content hidden">
+          <h2 class="text-xl font-semibold mb-4 text-white/90">Write a Note Manually</h2>
+          <p class="text-sm text-white/55 mb-4">No AI involved — just type your note and save it.</p>
+          <form method="post" action="{% url 'note-create' %}" class="flex flex-col gap-4">
+            {% csrf_token %}
+            <div>
+              <label for="manualTitle" class="block text-sm font-medium text-white/70 mb-2">Title</label>
+              <input id="manualTitle" name="youtube_title" type="text" required maxlength="300" placeholder="Give your note a title..." class="w-full h-12 rounded-2xl bg-black/20 border border-white/15 px-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60"/>
+            </div>
+            <div>
+              <label for="manualContent" class="block text-sm font-medium text-white/70 mb-2">Note Content</label>
+              <textarea id="manualContent" name="generated_content" rows="10" required placeholder="Write your notes here..." class="w-full rounded-2xl bg-black/20 border border-white/15 p-4 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#6d28ff]/60 whitespace-pre-wrap"></textarea>
+            </div>
+            <button type="submit" class="h-12 rounded-2xl bg-[#6d28ff] px-6 font-semibold hover:opacity-90 transition-opacity">
+              Save Note
+            </button>
+          </form>
+        </div>
+
         <div style="display:none;" id="loading-circle" class="load"></div>
 
         <section class="mt-10">
@@ -136,23 +160,22 @@
   </div>
 
   <script>
-    // Tab switching functionality
-    document.getElementById('youtubeTab').addEventListener('click', () => {
-      document.getElementById('youtubeContent').classList.remove('hidden');
-      document.getElementById('mp3Content').classList.add('hidden');
-      document.getElementById('youtubeTab').classList.add('border-[#6d28ff]', 'text-white/90');
-      document.getElementById('youtubeTab').classList.remove('border-transparent', 'text-white/50');
-      document.getElementById('mp3Tab').classList.add('border-transparent', 'text-white/50');
-      document.getElementById('mp3Tab').classList.remove('border-[#6d28ff]', 'text-white/90');
-    });
+    // Tab switching: one function handles every tab via data attributes.
+    function setActiveTab(name) {
+      document.querySelectorAll('[data-tab-content]').forEach(panel => {
+        panel.classList.toggle('hidden', panel.dataset.tabContent !== name);
+      });
+      document.querySelectorAll('[data-tab]').forEach(btn => {
+        const isActive = btn.dataset.tab === name;
+        btn.classList.toggle('text-white/90', isActive);
+        btn.classList.toggle('border-[#6d28ff]', isActive);
+        btn.classList.toggle('text-white/50', !isActive);
+        btn.classList.toggle('border-transparent', !isActive);
+      });
+    }
 
-    document.getElementById('mp3Tab').addEventListener('click', () => {
-      document.getElementById('youtubeContent').classList.add('hidden');
-      document.getElementById('mp3Content').classList.remove('hidden');
-      document.getElementById('mp3Tab').classList.add('border-[#6d28ff]', 'text-white/90');
-      document.getElementById('mp3Tab').classList.remove('border-transparent', 'text-white/50');
-      document.getElementById('youtubeTab').classList.add('border-transparent', 'text-white/50');
-      document.getElementById('youtubeTab').classList.remove('border-[#6d28ff]', 'text-white/90');
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
     });
 
     // MP3 file input handler

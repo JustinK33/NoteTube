@@ -62,6 +62,11 @@
                class="inline-flex items-center whitespace-nowrap rounded-full border border-amber-400/40 bg-amber-500/20 px-5 py-2 text-sm font-medium text-white hover:bg-amber-500/30 transition-colors">
               Export PDF
             </a>
+            <button id="exportNotionBtn"
+                    data-note-id="{{ note_post_detail.id }}"
+                    class="inline-flex items-center whitespace-nowrap rounded-full border border-pink-400/40 bg-pink-500/20 px-5 py-2 text-sm font-medium text-white hover:bg-pink-500/30 transition-colors disabled:opacity-50">
+              Export to Notion
+            </button>
             <a href="/saved-notes"
                class="inline-flex items-center whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-5 py-2 text-sm font-medium text-white hover:bg-white/15 transition-colors">
               Back to notes
@@ -101,9 +106,74 @@
             </div>
           </div>
         </div>
+        <div id="notionStatus" class="mt-4 hidden rounded-2xl border border-white/10 bg-black/20 p-4 text-sm"></div>
       </section>
     </div>
   </div>
+
+  <script>
+    function getCsrfCookie() {
+      const match = document.cookie.match(/csrftoken=([^;]+)/);
+      return match ? match[1] : '';
+    }
+
+    const notionBtn = document.getElementById('exportNotionBtn');
+    const notionStatus = document.getElementById('notionStatus');
+
+    notionBtn.addEventListener('click', async () => {
+      const noteId = notionBtn.dataset.noteId;
+      notionBtn.disabled = true;
+      const originalText = notionBtn.textContent;
+      notionBtn.textContent = 'Exporting...';
+      notionStatus.classList.add('hidden');
+
+      try {
+        const response = await fetch(`/note-export-notion/${noteId}/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCsrfCookie(),
+            'Content-Type': 'application/json',
+          },
+        });
+        const data = await response.json();
+
+        notionStatus.classList.remove('hidden');
+        notionStatus.textContent = '';
+        if (response.ok && data.url) {
+          notionStatus.append('Exported! ');
+          const link = document.createElement('a');
+          link.href = data.url;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.className = 'text-[#a78bfa] hover:underline';
+          link.textContent = 'Open in Notion →';
+          notionStatus.append(link);
+        } else if (data.error_code === 'notion_not_configured') {
+          notionStatus.append("Notion isn't connected yet. ");
+          const link = document.createElement('a');
+          link.href = '/notion-settings';
+          link.className = 'text-[#a78bfa] hover:underline';
+          link.textContent = 'Connect your workspace →';
+          notionStatus.append(link);
+        } else {
+          const span = document.createElement('span');
+          span.className = 'text-red-300';
+          span.textContent = `Export failed: ${data.message || 'Unknown error'}`;
+          notionStatus.append(span);
+        }
+      } catch (e) {
+        notionStatus.classList.remove('hidden');
+        notionStatus.textContent = '';
+        const span = document.createElement('span');
+        span.className = 'text-red-300';
+        span.textContent = 'Network error. Please try again.';
+        notionStatus.append(span);
+      } finally {
+        notionBtn.disabled = false;
+        notionBtn.textContent = originalText;
+      }
+    });
+  </script>
 
 </body>
 </html>
