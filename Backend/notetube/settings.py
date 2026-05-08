@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",  # using this for google oauth in admin page
+    "rest_framework",
 ]
 SITE_ID = 1
 
@@ -213,3 +214,31 @@ CONTENT_SERVICE_HOST = os.getenv("CONTENT_SERVICE_HOST", "content-service")
 CONTENT_SERVICE_PORT = int(os.getenv("CONTENT_SERVICE_PORT", "50051"))
 CONTENT_SERVICE_TIMEOUT = float(os.getenv("CONTENT_SERVICE_TIMEOUT", "10"))
 CONTENT_SERVICE_RETRIES = int(os.getenv("CONTENT_SERVICE_RETRIES", "1"))
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+# RAG / LangChain configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+RAG_EMBEDDING_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "text-embedding-3-small")
+RAG_CHAT_MODEL = os.getenv("RAG_CHAT_MODEL", "gpt-4o-mini")
+RAG_COLLECTION_NAME = os.getenv("RAG_COLLECTION_NAME", "notetube_notes")
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "5"))
+RAG_SEMANTIC_CACHE_THRESHOLD = float(os.getenv("RAG_SEMANTIC_CACHE_THRESHOLD", "0.05"))
+
+# PGVector wants a SQLAlchemy-style URL on the psycopg v3 driver.
+# Build it from the same env vars Django already uses for the primary DB.
+PGVECTOR_CONNECTION_STRING = os.getenv("PGVECTOR_CONNECTION_STRING") or (
+    f"postgresql+psycopg://{os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}"
+    f"@{os.getenv('PGHOST')}:{os.getenv('PGPORT', '5432')}/{os.getenv('PGDATABASE')}"
+    f"?sslmode=require"
+)
+
+REDIS_URL = os.getenv("REDIS_URL", "")

@@ -35,7 +35,42 @@
     </div>
   </nav>
 
-  <div class="mx-auto max-w-6xl px-4 py-10">
+  <div class="mx-auto max-w-6xl px-4 py-10 space-y-6">
+    <div class="max-w-3xl mx-auto rounded-[2rem] border border-white/15 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+      <section>
+        <div class="flex items-end justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-semibold tracking-tight">Ask your notes</h2>
+            <p class="mt-1 text-sm text-white/55">Semantic search across everything you've saved.</p>
+          </div>
+        </div>
+
+        <form id="searchForm" class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div class="relative flex-1">
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-3.5-3.5"></path>
+            </svg>
+            <input id="searchQuery" type="text" autocomplete="off"
+                   placeholder="What did the video say about React hooks?"
+                   class="w-full rounded-full border border-white/10 bg-black/30 pl-10 pr-4 py-3 text-sm text-white placeholder-white/35 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors">
+          </div>
+          <button id="searchBtn" type="submit"
+                  class="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-medium text-white hover:bg-white/15 hover:border-white/25 transition-colors disabled:opacity-50">
+            Ask
+          </button>
+        </form>
+
+        <div id="searchResult" class="mt-5 hidden rounded-2xl border border-white/10 bg-black/20 p-5">
+          <div id="searchAnswer" class="text-sm leading-relaxed text-white/80 whitespace-pre-wrap"></div>
+          <div id="searchSourcesWrap" class="mt-4 hidden">
+            <p class="text-xs uppercase tracking-wider text-white/40">Sources</p>
+            <div id="searchSources" class="mt-2 flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <div class="max-w-3xl mx-auto rounded-[2rem] border border-white/15 bg-white/5 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
       <section>
         <div class="flex items-end justify-between gap-4">
@@ -51,8 +86,6 @@
 
         <div class="mt-6 space-y-4">
           {% for post in notetube_post %}
-          <!-- <a href="note-details/{{ post.id }}/">  this was missing the trailing slash-->
-            <!-- it worked before because it prolly j saved the old link from the og account -->
           <a href="{% url 'note-details' post.id %}" class="block">
             <div class="rounded-2xl border border-white/10 bg-black/20 p-5 hover:bg-white/5 transition-colors">
               <h3 class="text-lg font-semibold text-white/90">{{ post.youtube_title }}</h3>
@@ -66,6 +99,75 @@
       </section>
     </div>
   </div>
+
+  <script>
+    function getCsrfCookie() {
+      const match = document.cookie.match(/csrftoken=([^;]+)/);
+      return match ? match[1] : '';
+    }
+
+    const form = document.getElementById('searchForm');
+    const input = document.getElementById('searchQuery');
+    const btn = document.getElementById('searchBtn');
+    const resultPanel = document.getElementById('searchResult');
+    const answerEl = document.getElementById('searchAnswer');
+    const sourcesWrap = document.getElementById('searchSourcesWrap');
+    const sourcesEl = document.getElementById('searchSources');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const query = input.value.trim();
+      if (!query) return;
+
+      btn.disabled = true;
+      const originalText = btn.textContent;
+      btn.textContent = 'Thinking…';
+      resultPanel.classList.remove('hidden');
+      answerEl.textContent = '';
+      sourcesWrap.classList.add('hidden');
+      sourcesEl.replaceChildren();
+      answerEl.className = 'text-sm leading-relaxed text-white/60 italic';
+      answerEl.textContent = 'Searching your notes…';
+
+      try {
+        const response = await fetch('/api/notes/search/', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCsrfCookie(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          answerEl.className = 'text-sm leading-relaxed text-red-300';
+          answerEl.textContent = data.message || data.detail || 'Search failed.';
+          return;
+        }
+
+        answerEl.className = 'text-sm leading-relaxed text-white/80 whitespace-pre-wrap';
+        answerEl.textContent = data.answer || '(no answer)';
+
+        if (Array.isArray(data.sources) && data.sources.length) {
+          for (const src of data.sources) {
+            const chip = document.createElement('a');
+            chip.href = `/note-details/${src.note_id}/`;
+            chip.className = 'inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 px-3 py-1 text-xs text-white/75 transition-colors';
+            chip.textContent = src.title || `Note ${src.note_id}`;
+            sourcesEl.appendChild(chip);
+          }
+          sourcesWrap.classList.remove('hidden');
+        }
+      } catch (err) {
+        answerEl.className = 'text-sm leading-relaxed text-red-300';
+        answerEl.textContent = 'Network error. Please try again.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+  </script>
 
 </body>
 </html>

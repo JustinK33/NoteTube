@@ -22,3 +22,10 @@ pytest
 pytest-cov
 grpcio
 protobuf
+djangorestframework
+langchain-core
+langchain-openai
+langchain-postgres
+langchain-redis
+pgvector
+tiktoken

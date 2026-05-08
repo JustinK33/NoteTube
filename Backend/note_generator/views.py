@@ -353,6 +353,7 @@ def note_create(request):
 
 
 @login_required
+@ensure_csrf_cookie
 def note_list(request):
     key = f"notes:list:user:{request.user.id}"
 
@@ -412,6 +413,31 @@ def note_edit(request, pk):
         return redirect("note-details", pk=pk)
 
     return render(request, "note_edit.html", {"note_post": note_post})
+
+
+@login_required
+@csrf_exempt
+def note_delete(request, pk):
+    if request.method != "POST":
+        return JsonResponse(
+            {"error_code": "method_not_allowed", "message": "POST required"},
+            status=405,
+        )
+
+    try:
+        note_post = NotePost.objects.get(id=pk, user=request.user)
+    except NotePost.DoesNotExist:
+        return JsonResponse(
+            {"error_code": "not_found", "message": "Note not found"},
+            status=404,
+        )
+
+    note_post.delete()
+
+    safe_cache_delete(f"notes:list:user:{request.user.id}")
+    safe_cache_delete(f"notes:detail:user:{request.user.id}:pk:{pk}")
+
+    return JsonResponse({"ok": True})
 
 
 @login_required

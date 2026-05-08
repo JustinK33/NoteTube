@@ -24,3 +24,22 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Profile<{self.user.username}>"
+
+
+class NoteEmbedding(models.Model):
+    """Bookkeeping for a NotePost's PGVector embedding.
+
+    PGVector owns the embedding row itself; this table just lets us look up
+    the vector id from a NotePost and skip re-embedding when content is
+    unchanged (content_hash match).
+    """
+
+    note = models.OneToOneField(
+        NotePost, on_delete=models.CASCADE, related_name="embedding"
+    )
+    vector_id = models.CharField(max_length=64, unique=True)
+    content_hash = models.CharField(max_length=64)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Embedding<note={self.note.pk}>"
