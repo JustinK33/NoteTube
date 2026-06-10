@@ -16,10 +16,6 @@ pytubefix
 youtube-transcript-api
 reportlab
 fastapi.responses
-black
-pytest-django
-pytest
-pytest-cov
 grpcio
 protobuf
 djangorestframework
