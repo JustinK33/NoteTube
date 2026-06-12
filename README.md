@@ -1,12 +1,12 @@
 # NoteTube
 
-An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (more to be added) into organized and structured notes
-
 [![CI](https://github.com/JustinK33/NoteTube/actions/workflows/ci.yml/badge.svg)](https://github.com/JustinK33/NoteTube/actions/workflows/ci.yml)
 
 <p align="center">
   <img src="NoteTube.png" alt="Architecture Diagram" width="800"/>
 </p>
+
+An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (more to be added) into organized and structured notes
 
 ---
 
