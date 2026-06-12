@@ -29,13 +29,19 @@ def authenticated_client(test_user):
 
 class TestExtractVideoId(TestCase):
     def test_extract_from_watch_url(self):
-        assert extract_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ") == "dQw4w9WgXcQ"
+        assert (
+            extract_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+            == "dQw4w9WgXcQ"
+        )
 
     def test_extract_from_youtu_be(self):
         assert extract_video_id("https://youtu.be/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
 
     def test_extract_from_shorts(self):
-        assert extract_video_id("https://www.youtube.com/shorts/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
+        assert (
+            extract_video_id("https://www.youtube.com/shorts/dQw4w9WgXcQ")
+            == "dQw4w9WgXcQ"
+        )
 
     def test_extract_invalid_url(self):
         with pytest.raises(ValueError):
@@ -77,7 +83,9 @@ def _task_result(client, task_id):
 @pytest.mark.django_db
 class TestGenerateNoteEndpoint(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpass123")
+        self.user = User.objects.create_user(
+            username="testuser", password="testpass123"
+        )
         self.client = Client()
         self.client.login(username="testuser", password="testpass123")
         cache.clear()
@@ -112,7 +120,10 @@ class TestGenerateNoteEndpoint(TestCase):
     @patch("note_generator.transcript_utils.get_transcript_with_diagnostics")
     @patch("note_generator.views.yt_title", return_value="Test Video")
     def test_transcript_fetch_429_rate_limited(self, _title, mock_diag):
-        mock_diag.return_value = (None, YouTubeBlockedError("HTTP 429 Too Many Requests"))
+        mock_diag.return_value = (
+            None,
+            YouTubeBlockedError("HTTP 429 Too Many Requests"),
+        )
 
         resp = _post_generate(self.client)
         assert resp.status_code == 202
@@ -133,7 +144,9 @@ class TestGenerateNoteEndpoint(TestCase):
         assert result["note_id"] is None
 
     @patch("note_generator.views.generate_blog_from_transcription")
-    @patch("note_generator.views.get_transcript", return_value="Test transcript content")
+    @patch(
+        "note_generator.views.get_transcript", return_value="Test transcript content"
+    )
     @patch("note_generator.views.yt_title", return_value="Test Video")
     def test_generation_failure(self, _title, _transcript, mock_generate):
         mock_generate.side_effect = Exception("OpenAI service unavailable")
@@ -145,8 +158,14 @@ class TestGenerateNoteEndpoint(TestCase):
         assert result["status"] == "failed"
         assert result["note_id"] is None
 
-    @patch("note_generator.views.generate_blog_from_transcription", return_value="# Generated Notes\n\nTest content")
-    @patch("note_generator.views.get_transcript", return_value="Test transcript with content")
+    @patch(
+        "note_generator.views.generate_blog_from_transcription",
+        return_value="# Generated Notes\n\nTest content",
+    )
+    @patch(
+        "note_generator.views.get_transcript",
+        return_value="Test transcript with content",
+    )
     @patch("note_generator.views.yt_title", return_value="Test Video Title")
     def test_successful_note_generation(self, _title, _transcript, _generate):
         resp = _post_generate(self.client)
@@ -168,12 +187,16 @@ class TestTranscriptCaching(TestCase):
 
         youtube_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-        transcript1, error1 = get_transcript_with_diagnostics(youtube_url, mock_get_transcript)
+        transcript1, error1 = get_transcript_with_diagnostics(
+            youtube_url, mock_get_transcript
+        )
         assert transcript1 == "Test transcript"
         assert error1 is None
         assert mock_get_transcript.call_count == 1
 
-        transcript2, error2 = get_transcript_with_diagnostics(youtube_url, mock_get_transcript)
+        transcript2, error2 = get_transcript_with_diagnostics(
+            youtube_url, mock_get_transcript
+        )
         assert transcript2 == "Test transcript"
         assert error2 is None
         assert mock_get_transcript.call_count == 1  # cache hit
@@ -187,11 +210,15 @@ class TestTranscriptCaching(TestCase):
 
         youtube_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-        transcript1, error1 = get_transcript_with_diagnostics(youtube_url, mock_get_transcript)
+        transcript1, error1 = get_transcript_with_diagnostics(
+            youtube_url, mock_get_transcript
+        )
         assert transcript1 is None
         assert error1.error_code == "youtube_blocked"
         assert mock_get_transcript.call_count == 1
 
-        transcript2, error2 = get_transcript_with_diagnostics(youtube_url, mock_get_transcript)
+        transcript2, error2 = get_transcript_with_diagnostics(
+            youtube_url, mock_get_transcript
+        )
         assert transcript2 is None
         assert mock_get_transcript.call_count == 1  # cache hit
