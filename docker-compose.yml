@@ -1,10 +1,16 @@
 services:
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+
   web:
     build: .
     env_file: .env
     environment:
       CONTENT_SERVICE_HOST: content-service
       CONTENT_SERVICE_PORT: 50051
+      REDIS_URL: redis://redis:6379/0
     expose:
       - "8000"
     ports:
@@ -13,6 +19,25 @@ services:
       - static_data:/vol/static
       - ./www.youtube.com_cookies.txt:/app/www.youtube.com_cookies.txt:ro
     depends_on:
+      - content-service
+      - redis
+
+  celery-worker:
+    build: .
+    env_file: .env
+    environment:
+      CONTENT_SERVICE_HOST: content-service
+      CONTENT_SERVICE_PORT: 50051
+      REDIS_URL: redis://redis:6379/0
+    command: >
+      sh -c "celery -A notetube worker
+             --loglevel=info
+             --concurrency=2
+             --chdir /app/Backend"
+    volumes:
+      - ./www.youtube.com_cookies.txt:/app/www.youtube.com_cookies.txt:ro
+    depends_on:
+      - redis
       - content-service
 
   content-service:

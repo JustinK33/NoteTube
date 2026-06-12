@@ -23,13 +23,15 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=NotePost)
 def _embed_on_note_save(sender, instance: NotePost, **kwargs):
-    # Embeddings are best-effort: a failing OpenAI call must not break note creation.
+    # Enqueue async — never block the HTTP response for an OpenAI embeddings call.
     try:
-        from note_generator.rag.embed import embed_note
+        from note_generator.tasks import embed_note_task
 
-        embed_note(instance)
+        embed_note_task.delay(instance.id)
     except Exception as e:
-        logger.exception(f"embed_note failed for note {instance.id}: {e}")
+        logger.exception(
+            f"Failed to enqueue embed_note_task for note {instance.id}: {e}"
+        )
 
 
 @receiver(post_delete, sender=NoteEmbedding)

@@ -25,3 +25,4 @@ langchain-postgres
 langchain-redis
 pgvector
 tiktoken
+celery[redis]

@@ -4,6 +4,7 @@ from .api_views import NoteSearchView
 
 urlpatterns = [
     path("api/notes/search/", NoteSearchView.as_view(), name="api-notes-search"),
+    path("api/task-status/<str:task_id>/", views.task_status, name="task-status"),
     path("", views.home, name="home"),
     path("index", views.index, name="index"),
     path("login", views.user_login, name="login"),

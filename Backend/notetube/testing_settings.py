@@ -30,3 +30,10 @@ MIGRATION_MODULES = DisableMigrations()
 
 STATICFILES_DIRS = []
 STATIC_ROOT = None
+
+# Run tasks synchronously and in-process; no Redis, no worker needed
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = False
+CELERY_TASK_STORE_EAGER_RESULT = True
+CELERY_BROKER_URL = "memory://"
+CELERY_RESULT_BACKEND = "cache+memory://"

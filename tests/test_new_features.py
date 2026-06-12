@@ -144,7 +144,7 @@ class NotionExportEndpointTests(TestCase):
         response = self.client.post(f"/note-export-notion/{other_note.pk}/")
         self.assertEqual(response.status_code, 404)
 
-    @patch("note_generator.views.export_note_to_notion")
+    @patch("note_generator.utils.notion_export.export_note_to_notion")
     def test_happy_path_returns_url(self, mock_export):
         mock_export.return_value = "https://www.notion.so/created-page"
         UserProfile.objects.create(
@@ -152,22 +152,30 @@ class NotionExportEndpointTests(TestCase):
             notion_token="secret_t",
             notion_parent_page_id="parent-id",
         )
-        response = self.client.post(f"/note-export-notion/{self.note.pk}/")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["url"], "https://www.notion.so/created-page")
+        resp = self.client.post(f"/note-export-notion/{self.note.pk}/")
+        self.assertEqual(resp.status_code, 202)
+        task_id = resp.json()["task_id"]
+
+        result = self.client.get(f"/api/task-status/{task_id}/").json()
+        self.assertEqual(result["status"], "done")
+        self.assertEqual(result["url"], "https://www.notion.so/created-page")
         mock_export.assert_called_once()
 
-    @patch("note_generator.views.export_note_to_notion")
-    def test_export_error_returns_502(self, mock_export):
+    @patch("note_generator.utils.notion_export.export_note_to_notion")
+    def test_export_notion_error_surfaces_in_task_result(self, mock_export):
         mock_export.side_effect = NotionExportError("Bad token")
         UserProfile.objects.create(
             user=self.user,
             notion_token="bad",
             notion_parent_page_id="parent",
         )
-        response = self.client.post(f"/note-export-notion/{self.note.pk}/")
-        self.assertEqual(response.status_code, 502)
-        self.assertEqual(response.json()["error_code"], "notion_failed")
+        resp = self.client.post(f"/note-export-notion/{self.note.pk}/")
+        self.assertEqual(resp.status_code, 202)
+        task_id = resp.json()["task_id"]
+
+        result = self.client.get(f"/api/task-status/{task_id}/").json()
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("Bad token", result["error"])
 
 
 class NoteDetailsCsrfCookieTests(TestCase):

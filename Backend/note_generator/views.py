@@ -33,11 +33,6 @@ from io import BytesIO
 from textwrap import wrap
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from note_generator.grpc_client import process_transcript_via_grpc
-from note_generator.utils.notion_export import (
-    export_note_to_notion,
-    NotionExportError,
-)
 
 aai.settings.api_key = os.getenv("APIKEY")
 
@@ -85,61 +80,32 @@ def normalize_youtube_url(raw: str) -> str:
 @login_required
 @csrf_exempt
 def mp3_to_notes(request):
-    if request.method == "POST":
-        try:
-            # Get MP3 file and title from form data
-            mp3_file = request.FILES.get("mp3_file")
-            title = request.POST.get("title", "Untitled Note")
-
-            if not mp3_file:
-                return JsonResponse({"error": "No MP3 file provided"}, status=400)
-
-            if not mp3_file.name.endswith(".mp3"):
-                return JsonResponse({"error": "File must be an MP3"}, status=400)
-
-            # Save MP3 to temporary location
-            temp_dir = tempfile.mkdtemp()
-            mp3_path = os.path.join(temp_dir, mp3_file.name)
-            with open(mp3_path, "wb") as f:
-                for chunk in mp3_file.chunks():
-                    f.write(chunk)
-
-            # Get transcript from MP3
-            transcription = get_mp3_transcript(mp3_path)
-            if not transcription:
-                shutil.rmtree(temp_dir)
-                return JsonResponse({"error": "Failed to get transcript"}, status=500)
-
-            # Use OpenAI to generate notes
-            note_content = generate_blog_from_transcription(transcription)
-            if not note_content:
-                shutil.rmtree(temp_dir)
-                return JsonResponse({"error": "Failed to generate notes"}, status=500)
-
-            # Save notes to database
-            new_note = NotePost.objects.create(
-                user=request.user,
-                youtube_title=title,
-                youtube_link="",  # No YouTube link for MP3
-                generated_content=note_content,
-            )
-            new_note.save()
-
-            # Clean up temporary files
-            shutil.rmtree(temp_dir)
-
-            # Invalidate cached list for this user
-            safe_cache_delete(f"notes:list:user:{request.user.id}")
-
-            # Return generated notes as response
-            return JsonResponse({"content": note_content})
-
-        except Exception as e:
-            return JsonResponse(
-                {"error": f"Error processing MP3: {str(e)}"}, status=500
-            )
-    else:
+    if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    try:
+        mp3_file = request.FILES.get("mp3_file")
+        title = request.POST.get("title", "Untitled Note")
+
+        if not mp3_file:
+            return JsonResponse({"error": "No MP3 file provided"}, status=400)
+        if not mp3_file.name.endswith(".mp3"):
+            return JsonResponse({"error": "File must be an MP3"}, status=400)
+
+        # Save to temp dir — the task owns cleanup from here
+        temp_dir = tempfile.mkdtemp()
+        mp3_path = os.path.join(temp_dir, mp3_file.name)
+        with open(mp3_path, "wb") as f:
+            for chunk in mp3_file.chunks():
+                f.write(chunk)
+
+        from note_generator.tasks import mp3_to_notes_task
+
+        task = mp3_to_notes_task.delay(request.user.id, mp3_path, title, temp_dir)
+        return JsonResponse({"task_id": task.id, "status": "processing"}, status=202)
+
+    except Exception as e:
+        return JsonResponse({"error": f"Error starting task: {str(e)}"}, status=500)
 
 
 def get_mp3_transcript(mp3_path: str) -> str:
@@ -165,7 +131,6 @@ def generate_note(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
-    # Rate limiting: 10 minutes between requests
     rate_limit_key = f"rate_limit:user:{request.user.id}"
     last_request = safe_cache_get(rate_limit_key)
     if last_request:
@@ -188,11 +153,7 @@ def generate_note(request):
             yt_link = normalize_youtube_url(yt_link_raw)
         except ValueError as e:
             return JsonResponse(
-                {
-                    "error_code": "invalid_url",
-                    "message": str(e),
-                },
-                status=400,
+                {"error_code": "invalid_url", "message": str(e)}, status=400
             )
     except (KeyError, json.JSONDecodeError):
         return JsonResponse(
@@ -200,97 +161,56 @@ def generate_note(request):
             status=400,
         )
 
-    # Get title (non-critical)
-    try:
-        title = yt_title(yt_link)
-    except Exception as e:
-        logger.warning(f"Could not fetch title for {yt_link}: {e}")
-        title = f"YouTube Note ({yt_link[:50]})"
+    # set before enqueueing so duplicate submissions are blocked while the task runs
+    safe_cache_set(rate_limit_key, time.time(), timeout=600)
 
-    # Get transcript with caching and error handling
-    from note_generator.transcript_utils import get_transcript_with_diagnostics
+    from note_generator.tasks import generate_note_task
 
-    transcript, transcript_error = get_transcript_with_diagnostics(
-        yt_link, get_transcript
-    )
+    task = generate_note_task.delay(request.user.id, yt_link)
+    return JsonResponse({"task_id": task.id, "status": "processing"}, status=202)
 
-    if transcript_error:
-        return JsonResponse(
-            {
-                "error_code": transcript_error.error_code,
-                "message": transcript_error.message,
-            },
-            status=transcript_error.http_status,
+
+@login_required
+def task_status(request, task_id):
+    from celery.result import AsyncResult
+
+    result = AsyncResult(task_id)
+    state = result.state
+    meta = result.info or {}
+
+    if state == "PENDING":
+        return JsonResponse({"status": "pending", "note_id": None, "error": None})
+
+    if state in ("STARTED", "PROGRESS"):
+        return JsonResponse({"status": "processing", "note_id": None, "error": None})
+
+    if state == "SUCCESS":
+        if isinstance(meta, dict):
+            error = meta.get("error")
+            if error:
+                return JsonResponse(
+                    {"status": "failed", "note_id": None, "error": error}
+                )
+            response_data = {
+                "status": "done",
+                "note_id": meta.get("note_id"),
+                "error": None,
+            }
+            if meta.get("url"):
+                response_data["url"] = meta["url"]
+            return JsonResponse(response_data)
+        return JsonResponse({"status": "done", "note_id": None, "error": None})
+
+    if state == "FAILURE":
+        error = (
+            str(meta)
+            if not isinstance(meta, dict)
+            else meta.get("error", "Task failed unexpectedly")
         )
+        return JsonResponse({"status": "failed", "note_id": None, "error": error})
 
-    if not transcript:
-        return JsonResponse(
-            {
-                "error_code": "no_transcript",
-                "message": "Transcript unavailable. Try MP3 upload or paste transcript.",
-            },
-            status=502,
-        )
-
-    # Generate notes via gRPC content-service with fallback to local generation.
-    try:
-        note_content = process_transcript_via_grpc(
-            transcript_text=transcript,
-            source_url=yt_link,
-            title=title,
-        )
-        if not note_content:
-            return JsonResponse(
-                {
-                    "error_code": "generation_failed",
-                    "message": "Failed to generate notes. Please try again.",
-                },
-                status=500,
-            )
-    except Exception as e:
-        logger.warning(
-            f"gRPC note generation failed, falling back to local OpenAI path: {e}"
-        )
-        try:
-            note_content = generate_blog_from_transcription(transcript)
-            if not note_content:
-                raise RuntimeError("empty local generation result")
-        except Exception as fallback_error:
-            logger.exception(f"Note generation failed after fallback: {fallback_error}")
-            return JsonResponse(
-                {
-                    "error_code": "generation_failed",
-                    "message": "Note generation service temporarily unavailable.",
-                },
-                status=503,
-            )
-
-    # Save to database
-    try:
-        new_note = NotePost.objects.create(
-            user=request.user,
-            youtube_title=title,
-            youtube_link=yt_link,
-            generated_content=note_content,
-        )
-        new_note.save()
-
-        # Invalidate cache
-        safe_cache_delete(f"notes:list:user:{request.user.id}")
-
-        # Set rate limit (10 minutes)
-        safe_cache_set(rate_limit_key, time.time(), timeout=600)
-
-        return JsonResponse({"content": note_content})
-    except Exception as e:
-        logger.exception(f"Failed to save note: {e}")
-        return JsonResponse(
-            {
-                "error_code": "save_failed",
-                "message": "Could not save notes. Please try again.",
-            },
-            status=500,
-        )
+    # RETRY or unknown custom state
+    return JsonResponse({"status": "processing", "note_id": None, "error": None})
 
 
 @login_required
@@ -518,19 +438,18 @@ def note_export(request, pk):
 
 
 @login_required
+@csrf_exempt
 def note_export_notion(request, pk):
     if request.method != "POST":
         return JsonResponse(
-            {"error_code": "method_not_allowed", "message": "POST required"},
-            status=405,
+            {"error_code": "method_not_allowed", "message": "POST required"}, status=405
         )
 
     try:
-        note_post = NotePost.objects.get(id=pk, user=request.user)
+        NotePost.objects.get(id=pk, user=request.user)
     except NotePost.DoesNotExist:
         return JsonResponse(
-            {"error_code": "not_found", "message": "Note not found"},
-            status=404,
+            {"error_code": "not_found", "message": "Note not found"}, status=404
         )
 
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
@@ -543,22 +462,10 @@ def note_export_notion(request, pk):
             status=400,
         )
 
-    try:
-        page_url = export_note_to_notion(
-            token=profile.notion_token,
-            parent_page_id=profile.notion_parent_page_id,
-            title=note_post.youtube_title,
-            content=note_post.generated_content,
-            source_url=note_post.youtube_link or "",
-        )
-    except NotionExportError as e:
-        logger.warning(f"Notion export failed for note {pk}: {e}")
-        return JsonResponse(
-            {"error_code": "notion_failed", "message": str(e)},
-            status=502,
-        )
+    from note_generator.tasks import export_to_notion_task
 
-    return JsonResponse({"url": page_url})
+    task = export_to_notion_task.delay(pk, request.user.id)
+    return JsonResponse({"task_id": task.id, "status": "processing"}, status=202)
 
 
 def yt_title(link):

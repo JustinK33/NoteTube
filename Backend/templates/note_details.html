@@ -210,55 +210,92 @@
     notionBtn.addEventListener('click', async () => {
       const noteId = notionBtn.dataset.noteId;
       notionBtn.disabled = true;
-      const originalText = notionBtn.textContent;
+      const originalHTML = notionBtn.innerHTML;
       notionBtn.textContent = 'Exporting...';
       notionStatus.classList.add('hidden');
+      notionStatus.textContent = '';
 
+      let taskId;
       try {
         const response = await fetch(`/note-export-notion/${noteId}/`, {
           method: 'POST',
-          headers: {
-            'X-CSRFToken': getCsrfCookie(),
-            'Content-Type': 'application/json',
-          },
+          headers: { 'X-CSRFToken': getCsrfCookie(), 'Content-Type': 'application/json' },
         });
         const data = await response.json();
 
+        if (!response.ok) {
+          notionStatus.classList.remove('hidden');
+          if (data.error_code === 'notion_not_configured') {
+            notionStatus.append("Notion isn't connected yet. ");
+            const link = document.createElement('a');
+            link.href = '/notion-settings';
+            link.className = 'text-[#a78bfa] hover:underline';
+            link.textContent = 'Connect your workspace →';
+            notionStatus.append(link);
+          } else {
+            const span = document.createElement('span');
+            span.className = 'text-red-300';
+            span.textContent = `Export failed: ${data.message || 'Unknown error'}`;
+            notionStatus.append(span);
+          }
+          notionBtn.disabled = false;
+          notionBtn.innerHTML = originalHTML;
+          return;
+        }
+        taskId = data.task_id;
+      } catch (_) {
         notionStatus.classList.remove('hidden');
-        notionStatus.textContent = '';
-        if (response.ok && data.url) {
+        const span = document.createElement('span');
+        span.className = 'text-red-300';
+        span.textContent = 'Network error. Please try again.';
+        notionStatus.append(span);
+        notionBtn.disabled = false;
+        notionBtn.innerHTML = originalHTML;
+        return;
+      }
+
+      // Poll for Notion task completion (max 30s)
+      for (let i = 0; i < 15; i++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        let statusData;
+        try {
+          const r = await fetch(`/api/task-status/${taskId}/`);
+          statusData = await r.json();
+        } catch (_) { continue; }
+
+        if (statusData.status === 'done' && statusData.url) {
+          notionStatus.classList.remove('hidden');
           notionStatus.append('Exported! ');
           const link = document.createElement('a');
-          link.href = data.url;
+          link.href = statusData.url;
           link.target = '_blank';
           link.rel = 'noopener';
           link.className = 'text-[#a78bfa] hover:underline';
           link.textContent = 'Open in Notion →';
           notionStatus.append(link);
-        } else if (data.error_code === 'notion_not_configured') {
-          notionStatus.append("Notion isn't connected yet. ");
-          const link = document.createElement('a');
-          link.href = '/notion-settings';
-          link.className = 'text-[#a78bfa] hover:underline';
-          link.textContent = 'Connect your workspace →';
-          notionStatus.append(link);
-        } else {
+          notionBtn.disabled = false;
+          notionBtn.innerHTML = originalHTML;
+          return;
+        }
+        if (statusData.status === 'failed') {
+          notionStatus.classList.remove('hidden');
           const span = document.createElement('span');
           span.className = 'text-red-300';
-          span.textContent = `Export failed: ${data.message || 'Unknown error'}`;
+          span.textContent = `Export failed: ${statusData.error || 'Unknown error'}`;
           notionStatus.append(span);
+          notionBtn.disabled = false;
+          notionBtn.innerHTML = originalHTML;
+          return;
         }
-      } catch (e) {
-        notionStatus.classList.remove('hidden');
-        notionStatus.textContent = '';
-        const span = document.createElement('span');
-        span.className = 'text-red-300';
-        span.textContent = 'Network error. Please try again.';
-        notionStatus.append(span);
-      } finally {
-        notionBtn.disabled = false;
-        notionBtn.textContent = originalText;
       }
+
+      notionStatus.classList.remove('hidden');
+      const span = document.createElement('span');
+      span.className = 'text-red-300';
+      span.textContent = 'Export timed out. Check Notion directly — it may have completed.';
+      notionStatus.append(span);
+      notionBtn.disabled = false;
+      notionBtn.innerHTML = originalHTML;
     });
   </script>
 

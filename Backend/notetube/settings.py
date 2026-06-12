@@ -242,3 +242,16 @@ PGVECTOR_CONNECTION_STRING = os.getenv("PGVECTOR_CONNECTION_STRING") or (
 )
 
 REDIS_URL = os.getenv("REDIS_URL", "")
+
+# Celery — broker and result backend share the same Redis instance
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_RESULT_EXPIRES = 3600  # keep results for 1 hour (generous polling window)
+CELERY_TASK_ACKS_LATE = True  # re-queue task if a worker crashes mid-execution
+CELERY_WORKER_PREFETCH_MULTIPLIER = (
+    1  # one task at a time per worker (all tasks are I/O-heavy)
+)
+CELERY_TIMEZONE = "UTC"

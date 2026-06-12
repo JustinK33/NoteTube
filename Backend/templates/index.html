@@ -190,54 +190,90 @@
       document.getElementById('mp3FileName').classList.add('text-white');
     });
 
-    // YouTube notes generation
-    document.getElementById('generateBlogButton').addEventListener('click', async () => {
-      const youtubeLink = document.getElementById('youtubeLink').value;
+    // Shared polling helper — polls task status until done, failed, or timeout
+    async function pollTask(taskId, onDone, onFailed, statusMessages, maxPolls = 90) {
       const blogContent = document.getElementById('blogContent');
+      const loadingCircle = document.getElementById('loading-circle');
 
-      if (youtubeLink) {
-        document.getElementById('loading-circle').style.display = 'block';
-        blogContent.innerHTML = '';
+      for (let i = 0; i < maxPolls; i++) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        const endpointUrl = '/generate-notes';
-
+        let statusData;
         try {
-          const response = await fetch(endpointUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ link: youtubeLink })
-          });
-
-          const data = await response.json();
-
-          if (data.error_code || data.error) {
-            const errorMessage = data.message || data.error;
-            const errorCode = data.error_code || 'unknown_error';
-            
-            // Provide helpful fallback message
-            let userMessage = errorMessage;
-            if (errorCode === 'youtube_blocked') {
-              userMessage = `${errorMessage}\n\n💡 Tip: Try uploading an MP3 file instead on the "Upload MP3" tab.`;
-            } else if (errorCode === 'no_transcript') {
-              userMessage = `${errorMessage}\n\n💡 Tip: Switch to the "Upload MP3" tab to upload an MP3 file.`;
-            }
-            
-            blogContent.innerHTML = `<p style="color: #ff6b6b; white-space: pre-wrap;">${userMessage}</p>`;
-          } else {
-            blogContent.innerHTML = data.content;
-          }
-
-        } catch (error) {
-          console.error("Error occurred:", error);
-          blogContent.innerHTML = '<p style="color: #ff6b6b;">Network error. Please check your connection and try again.</p>';
+          const r = await fetch(`/api/task-status/${taskId}/`);
+          statusData = await r.json();
+        } catch (_) {
+          continue; // transient network error — keep polling
         }
 
-        document.getElementById('loading-circle').style.display = 'none';
-      } else {
-        alert("Please enter a YouTube link.");
+        if (statusData.status === 'done') {
+          loadingCircle.style.display = 'none';
+          onDone(statusData);
+          return;
+        }
+        if (statusData.status === 'failed') {
+          loadingCircle.style.display = 'none';
+          onFailed(statusData.error || 'Something went wrong.');
+          return;
+        }
+
+        // Update status message based on elapsed seconds
+        const elapsed = (i + 1) * 2;
+        let msg = statusMessages[0];
+        if (elapsed > 20 && statusMessages[1]) msg = statusMessages[1];
+        if (elapsed > 50 && statusMessages[2]) msg = statusMessages[2];
+        blogContent.innerHTML = `<p class="text-white/45 text-sm">${msg} (${elapsed}s)</p>`;
       }
+
+      loadingCircle.style.display = 'none';
+      blogContent.innerHTML = '<p style="color: #ff6b6b;">Generation timed out. Check Saved Notes in a moment — it may still complete.</p>';
+    }
+
+    // YouTube notes generation
+    document.getElementById('generateBlogButton').addEventListener('click', async () => {
+      const youtubeLink = document.getElementById('youtubeLink').value.trim();
+      const blogContent = document.getElementById('blogContent');
+      const loadingCircle = document.getElementById('loading-circle');
+
+      if (!youtubeLink) {
+        alert("Please enter a YouTube link.");
+        return;
+      }
+
+      loadingCircle.style.display = 'block';
+      blogContent.innerHTML = '<p class="text-white/45 text-sm">Starting note generation...</p>';
+
+      let taskId;
+      try {
+        const response = await fetch('/generate-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ link: youtubeLink }),
+        });
+        const data = await response.json();
+
+        if (!response.ok || data.error_code || data.error) {
+          loadingCircle.style.display = 'none';
+          blogContent.innerHTML = `<p style="color: #ff6b6b; white-space: pre-wrap;">${data.message || data.error || 'Unknown error'}</p>`;
+          return;
+        }
+        taskId = data.task_id;
+      } catch (_) {
+        loadingCircle.style.display = 'none';
+        blogContent.innerHTML = '<p style="color: #ff6b6b;">Network error. Please check your connection and try again.</p>';
+        return;
+      }
+
+      await pollTask(
+        taskId,
+        (result) => { window.location.href = `/note-details/${result.note_id}/`; },
+        (error)  => { blogContent.innerHTML = `<p style="color: #ff6b6b; white-space: pre-wrap;">${error}</p>`; },
+        [
+          'Fetching transcript...',
+          'Processing transcript and generating notes...',
+          'Almost there, finishing up...',
+        ]
+      );
     });
 
     // MP3 notes generation
@@ -245,44 +281,47 @@
       const mp3File = document.getElementById('mp3File').files[0];
       const title = document.getElementById('mp3Title').value || 'Untitled Note';
       const blogContent = document.getElementById('blogContent');
+      const loadingCircle = document.getElementById('loading-circle');
 
       if (!mp3File) {
         alert("Please select an MP3 file.");
         return;
       }
 
-      document.getElementById('loading-circle').style.display = 'block';
-      blogContent.innerHTML = '';
+      loadingCircle.style.display = 'block';
+      blogContent.innerHTML = '<p class="text-white/45 text-sm">Uploading MP3...</p>';
 
       const formData = new FormData();
       formData.append('mp3_file', mp3File);
       formData.append('title', title);
 
+      let taskId;
       try {
-        const response = await fetch('/mp3-to-notes', {
-          method: 'POST',
-          body: formData
-        });
-
+        const response = await fetch('/mp3-to-notes', { method: 'POST', body: formData });
         const data = await response.json();
 
-        if (data.error) {
-          alert('Error: ' + data.error);
-        } else {
-          blogContent.innerHTML = data.content;
-          document.getElementById('mp3File').value = '';
-          document.getElementById('mp3FileName').textContent = 'Choose MP3 file...';
-          document.getElementById('mp3FileName').classList.add('text-white/50');
-          document.getElementById('mp3FileName').classList.remove('text-white');
-          document.getElementById('mp3Title').value = '';
+        if (!response.ok || data.error) {
+          loadingCircle.style.display = 'none';
+          blogContent.innerHTML = `<p style="color: #ff6b6b;">${data.error || 'Failed to start processing.'}</p>`;
+          return;
         }
-
-      } catch (error) {
-        console.error("Error occurred:", error);
-        alert("Something went wrong. Please try again later.");
+        taskId = data.task_id;
+      } catch (_) {
+        loadingCircle.style.display = 'none';
+        blogContent.innerHTML = '<p style="color: #ff6b6b;">Network error. Please try again.</p>';
+        return;
       }
 
-      document.getElementById('loading-circle').style.display = 'none';
+      await pollTask(
+        taskId,
+        (result) => { window.location.href = `/note-details/${result.note_id}/`; },
+        (error)  => { blogContent.innerHTML = `<p style="color: #ff6b6b; white-space: pre-wrap;">${error}</p>`; },
+        [
+          'Transcribing audio...',
+          'Transcription in progress, this can take a minute...',
+          'Generating notes from transcript...',
+        ]
+      );
     });
   </script>
 

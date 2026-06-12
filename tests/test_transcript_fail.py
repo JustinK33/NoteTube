@@ -16,22 +16,21 @@ class TranscriptFailureTest(TestCase):
 
     @patch("note_generator.transcript_utils.get_transcript_with_diagnostics")
     @patch("note_generator.views.yt_title", return_value="Any Title")
-    @patch(
-        "note_generator.views.generate_blog_from_transcription",
-        return_value="won't be used",
-    )
-    def test_transcript_missing_returns_502(self, _gen, _title, _transcript_diag):
-        # Mock the function to return None transcript with error
-        _transcript_diag.return_value = (None, NoTranscriptError())
+    def test_no_transcript_surfaces_as_task_error(self, _title, mock_diag):
+        mock_diag.return_value = (None, NoTranscriptError())
 
-        url = reverse("generate-notes")
         resp = self.client.post(
-            url,
+            reverse("generate-notes"),
             data=json.dumps({"link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}),
             content_type="application/json",
         )
 
-        assert resp.status_code == 502
-        data = resp.json()
-        assert "error_code" in data
-        assert data["error_code"] == "no_transcript"
+        # View enqueues immediately
+        self.assertEqual(resp.status_code, 202)
+        task_id = resp.json()["task_id"]
+
+        # Task ran eagerly; result is available now
+        status = self.client.get(f"/api/task-status/{task_id}/")
+        data = status.json()
+        self.assertEqual(data["status"], "failed")
+        self.assertIsNone(data["note_id"])
