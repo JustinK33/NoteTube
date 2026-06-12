@@ -6,83 +6,114 @@
   <img src="NoteTube.png" alt="Architecture Diagram" width="800"/>
 </p>
 
-An AI-powered web app that turns your favorite YouTube video tutorials or mp3 (more to be added) into organized and structured notes
+An AI-powered web app that turns YouTube videos and audio recordings into organized, structured notes — with semantic search, async processing, and Notion export.
 
 ---
 
 ## Tech Stack
 
-- Python
-- Django
-- Nginx
-- gRPC
-- k6
+- Python 3.12 / Django 6
+- Celery + Redis (async task queue)
+- gRPC microservice (content-service)
+- OpenAI (GPT-4.1-nano + text-embedding-3-small)
+- AssemblyAI (audio transcription)
+- PostgreSQL + pgvector (vector search / RAG)
+- LangChain (RAG pipeline)
+- Nginx + Certbot (TLS auto-renewal)
+- Docker Compose (6 services)
 - AWS EC2
-- PostgreSQL
-- Docker
 - Tailwind CSS
-- Gunicorn
-- OpenAI
-- AssemblyAI
 
 ---
 
-## Features (updating...)
+## Features
 
-- **End-to-end app flow**
-  - Frontend + backend integrated into a **fullstack app**
-  - Authenticated users can:
-    - Sign up / log in
-    - Create notes with AI
-    - Edit and export notes
-
-- **API-Chain Pipeline**
-  - Turn YouTube videos into transcripts via AssemblyAI.
-  - Transcripts get plugged into the prompt to create structured notes.
+- **YouTube & MP3 → AI Notes** — paste a link or upload audio; notes are generated asynchronously in the background
+- **Semantic search (RAG)** — ask questions against your notes using pgvector cosine similarity + GPT-4o-mini
+- **Export** — download notes as TXT, Markdown, or PDF; push directly to a Notion page
+- **Transcript caching** — Redis-backed (1h TTL) to avoid re-fetching the same video
+- **Google OAuth** login alongside standard email/password auth
+- **Rate limiting** — per-user Redis-backed limits on generation endpoints
 
 ---
 
-## 📚 What I Learned From This Project
+## Architecture
 
-- **Reverse Proxy via Nginx**
-  Integrated a reverse proxy via **Nginx** sitting in front of my webserver
-  Using light-weight version of the heavy NGINX image, nginx:alpine, significantly improving static assest performance
-   
-- **Deployment via AWS EC2 instance**
-  Deployed and configured EC2 instance for hosting a web application
+```
+Internet
+   │ HTTPS
+   ▼
+nginx (alpine) — TLS termination, static files, Certbot auto-renew
+   │ HTTP
+   ▼
+web (Django + Gunicorn)
+   ├── celery-worker — async note generation, embeddings, Notion export
+   └── content-service — gRPC transcript chunking & structured note pipeline
+         │
+         ├── Redis — broker, result backend, cache, RAG semantic cache
+         └── PostgreSQL + pgvector — primary DB + vector store
+```
 
-- **gRPC service to service communcation framework**
-  Connected main django backend to content service
-  Also learned how to work with microservice structures
+---
 
-- **Integrated Continuous Integration**
-  Implemented GitHub action workflows for continuous integration and continuous delivery
-   
-- **Load and stress testing with k6**
-  Implemented **k6-based** load and stress tests to validate API performance, **latency**,** throughput (req/s)** and error rates under realistic traffic patterns.
- 
-- **Managing multiple containers**
-  Defined, configured, and managed a multi-container application.
+## What I Learned From This Project
 
-- **Working with Django**  
-  I learned how to work with the Django framework and its quick-to-develop qualities, like a built-in authentication system.
+- **Async task queue (Celery + Redis)**
+  Offloaded slow AI pipelines (30–150s) to background workers so users see a response in under a second and poll for results via `/api/task-status/`.
 
-- **API-Chain Pipeline**
-  I Learned how to chain API outputs into inputs by feeding AssemblyAI transcripts into OpenAI to produce clean, structured notes.
+- **gRPC service-to-service communication**
+  Connected the main Django backend to a dedicated content-service over gRPC + Protocol Buffers for fast, typed inter-process communication.
+
+- **RAG semantic search with pgvector + LangChain**
+  Embedded notes with `text-embedding-3-small`, stored vectors in pgvector, and wired a LangChain retrieval chain to answer natural-language questions over a user's note library.
+
+- **Reverse proxy via Nginx**
+  Nginx (alpine) sits in front of Gunicorn for TLS termination, static file serving, and connection handling — bypassing the Python process entirely for static assets.
+
+- **TLS auto-renewal with Certbot**
+  Certbot runs on a 12-hour cron inside Docker; nginx polls a sentinel file and reloads certificates without downtime.
+
+- **Deployment on AWS EC2**
+  Configured a single EC2 instance running all 6 Docker Compose services with external PostgreSQL (RDS/Neon) and Redis.
+
+- **Continuous Integration with GitHub Actions**
+  CI pipeline runs Black formatting checks and pytest with coverage on every push to main.
+
+- **Multi-container orchestration with Docker Compose**
+  Defined, networked, and managed 6 services (`web`, `celery-worker`, `content-service`, `redis`, `nginx`, `certbot`) with shared volumes and environment configuration.
 
 ---
 
 ## Running the Project
 
-### To run the project locally, follow these steps:
+### With Docker (recommended)
 
-  1. Clone the repo (git clone <url>)
-  2. Create a virtual environment (python3 -m venv venv)
-  3. Activate the environment (source venv/bin/activate)
-  4. Install requirements (pip install -r requirements.txt)
-  5. Run locally (python manage.py runserver)
-     
-### Run with Docker
+```bash
+git clone <repo>
+cd NoteTube
+cp .env.example .env   # fill in API keys
+docker compose up --build
+# App available at http://localhost:8000
+```
 
-  1. Build image (docker build -t notetube:latest)
-  2. Run image (docker run --rm -p 8000:8000 --env-file .env notetube:latest)
+### Locally (without Docker)
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements-dev.txt
+python manage.py runserver
+```
+
+**Required environment variables:**
+
+| Variable | Description |
+|---|---|
+| `SECRET_KEY` | Django secret key |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `APIKEY` | AssemblyAI API key |
+| `PGDATABASE / PGUSER / PGPASSWORD / PGHOST / PGPORT` | PostgreSQL connection |
+| `REDIS_URL` | Redis URL |
+| `GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET` | Google OAuth (optional) |
+| `DEBUG` | `true` for local dev |
+| `ALLOWED_HOSTS` | Comma-separated hostnames |
