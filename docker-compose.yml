@@ -29,11 +29,15 @@ services:
       CONTENT_SERVICE_HOST: content-service
       CONTENT_SERVICE_PORT: 50051
       REDIS_URL: redis://redis:6379/0
-    command: >
-      sh -c "celery -A notetube worker
-             --loglevel=info
-             --concurrency=2
-             --chdir /app/Backend"
+    command:
+      - celery
+      - -A
+      - notetube
+      - worker
+      - --loglevel=info
+      - --concurrency=2
+      - --chdir
+      - /app/Backend
     volumes:
       - ./www.youtube.com_cookies.txt:/app/www.youtube.com_cookies.txt:ro
     depends_on:
