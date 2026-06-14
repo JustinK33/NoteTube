@@ -27,7 +27,7 @@ import subprocess
 from fastapi.responses import FileResponse
 import tempfile
 import shutil
-from youtube_transcript_api import YouTubeTranscriptApi
+import requests as http_requests
 from django.utils.text import slugify
 from io import BytesIO
 from textwrap import wrap
@@ -521,21 +521,31 @@ def download_audio(link: str) -> str:
     return candidates[0]
 
 
-# we gon use assembly ai to get the transcription
 def get_transcript(link):
-    # Prefer native caption transcript first; this avoids yt-dlp for many videos.
     try:
         video_match = re.search(r"[?&]v=([0-9A-Za-z_-]{11})", link)
         video_id = video_match.group(1) if video_match else None
         if video_id:
-            transcript_data = YouTubeTranscriptApi().fetch(video_id)
-            transcript_text = " ".join(
-                chunk.text.strip() for chunk in transcript_data
-            ).strip()
-            if transcript_text:
-                return transcript_text
+            serp_key = getattr(settings, "SERP_API_KEY", None) or os.getenv("SERP_API")
+            resp = http_requests.get(
+                "https://serpapi.com/search",
+                params={
+                    "engine": "youtube_transcript",
+                    "video_id": video_id,
+                    "api_key": serp_key,
+                },
+                timeout=15,
+            )
+            data = resp.json()
+            chunks = data.get("transcript", [])
+            if chunks:
+                transcript_text = " ".join(
+                    c.get("text", "").strip() for c in chunks
+                ).strip()
+                if transcript_text:
+                    return transcript_text
     except Exception as e:
-        logger.warning(f"YouTubeTranscriptApi failed, falling back to yt-dlp: {e}")
+        logger.warning(f"SerpAPI transcript fetch failed, falling back to yt-dlp: {e}")
 
     audio_file = download_audio(link)
     try:
