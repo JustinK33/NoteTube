@@ -36,7 +36,7 @@ SERP_API_KEY = os.getenv("SERP_API")
 DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv(
-    "ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,web,54.167.105.59"
+    "ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,web,54.167.105.59,.vercel.app"
 ).split(",")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -183,7 +183,12 @@ STATIC_URL = "/static/"
 
 # this is for reverse proxy for nginx
 STATICFILES_DIRS = [BASE_DIR / "static"]  # where i deploy static files
-STATIC_ROOT = "/vol/static"  # nginx reads from here
+# ponytail: env-overridable so collectstatic works where /vol isn't writable (e.g. Vercel).
+STATIC_ROOT = os.getenv("STATIC_ROOT", "/vol/static")  # nginx reads from here
+STORAGES = {
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+}
 
 LOGIN_URL = "login"
 

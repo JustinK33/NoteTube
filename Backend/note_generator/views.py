@@ -6,11 +6,7 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
-from fastapi import HTTPException
 import json, os, time
-from pytubefix import YouTube
-import assemblyai as aai
-import openai
 from .models import NotePost, UserProfile
 import traceback
 import tempfile
@@ -24,17 +20,27 @@ from django.core.cache import cache
 import re
 import logging
 import subprocess
-from fastapi.responses import FileResponse
 import tempfile
 import shutil
 import requests as http_requests
 from django.utils.text import slugify
 from io import BytesIO
 from textwrap import wrap
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 
-aai.settings.api_key = os.getenv("APIKEY")
+# ponytail: heavy/optional deps guarded so the app boots on slim hosts (e.g. Vercel).
+# Frontend routes work; note-generation routes 500 at call time until these are installed.
+try:
+    from fastapi import HTTPException
+    from fastapi.responses import FileResponse
+    from pytubefix import YouTube
+    import assemblyai as aai
+    import openai
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+
+    aai.settings.api_key = os.getenv("APIKEY")
+except ModuleNotFoundError as _e:
+    logging.getLogger(__name__).warning("Note-generation deps unavailable: %s", _e)
 
 
 def home(request):

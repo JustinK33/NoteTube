@@ -1,3 +1,12 @@
-# ponytail: slim deps so Vercel function stays under 500MB. Full deps in repo-root requirements.txt.
+# ponytail: slim deps so the Vercel function stays under 500MB and Django boots to serve
+# the frontend. Note-generation deps (openai/langchain/celery/etc.) live in repo-root
+# requirements.txt and are guarded as optional in views.py.
 django
 whitenoise
+python-dotenv
+psycopg[binary]
+django-allauth
+django-redis
+djangorestframework
+pyjwt
+cryptography
