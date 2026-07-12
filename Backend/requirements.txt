@@ -1,0 +1,3 @@
+# ponytail: slim deps so Vercel function stays under 500MB. Full deps in repo-root requirements.txt.
+django
+whitenoise
