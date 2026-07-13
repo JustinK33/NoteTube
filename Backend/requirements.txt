@@ -6,6 +6,7 @@ whitenoise
 python-dotenv
 psycopg[binary]
 django-allauth
+requests
 django-redis
 djangorestframework
 pyjwt
