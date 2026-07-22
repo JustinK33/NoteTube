@@ -102,6 +102,8 @@ docker compose up --build
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements-dev.txt
+cp .env.example .env   # fill in API keys
+cd Backend
 python manage.py runserver
 ```
 

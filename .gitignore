@@ -17,6 +17,7 @@ ENV/
 # === Environment / secrets ===
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 
@@ -44,3 +45,4 @@ Thumbs.db
 docker-compose.override.yml
 
 django.txt
+.vercel
