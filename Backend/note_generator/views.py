@@ -6,26 +6,28 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
-import json, os, time
-from .models import NotePost, UserProfile
-import traceback
+import glob
+import json
+import logging
+import os
+import re
+import subprocess
 import tempfile
+import time
+import traceback
+from io import BytesIO
+from textwrap import wrap
+
+import requests as http_requests
+from django.utils.text import slugify
+
+from .models import NotePost, UserProfile
 from note_generator.utils.cache_utils import (
     cached_get_or_set,
     safe_cache_get,
     safe_cache_set,
     safe_cache_delete,
 )
-from django.core.cache import cache
-import re
-import logging
-import subprocess
-import tempfile
-import shutil
-import requests as http_requests
-from django.utils.text import slugify
-from io import BytesIO
-from textwrap import wrap
 
 # ponytail: heavy/optional deps guarded so the app boots on slim hosts (e.g. Vercel).
 # Frontend routes work; note-generation routes 500 at call time until these are installed.
@@ -52,7 +54,6 @@ def index(request):
     return render(request, "index.html")
 
 
-# learn this later
 logger = logging.getLogger(__name__)
 
 YOUTUBE_ID_RE = re.compile(r"([0-9A-Za-z_-]{11})")
@@ -115,7 +116,7 @@ def mp3_to_notes(request):
 
 
 def get_mp3_transcript(mp3_path: str) -> str:
-    # since they upload a mp3 we dont need to store it and just get a transcript from it
+    # Uploads are transient: transcribe in place, no persistence needed.
     if not mp3_path.endswith(".mp3"):
         raise ValueError("File must be an .mp3")
 
@@ -125,7 +126,7 @@ def get_mp3_transcript(mp3_path: str) -> str:
     transcriber = aai.Transcriber()
     transcript = transcriber.transcribe(mp3_path)
 
-    if transcript.text is None:  # fixes type check error
+    if transcript.text is None:
         raise RuntimeError("Transcription error: no text returned")
 
     return transcript.text
@@ -484,9 +485,6 @@ def yt_title(link):
         raise
 
 
-import subprocess, tempfile, os, glob
-
-
 def download_audio(link: str) -> str:
     tmpdir = tempfile.gettempdir()
     outtmpl = os.path.join(tmpdir, "%(id)s.%(ext)s")
@@ -651,7 +649,6 @@ def user_signup(request):
         if password != repeatPassword:
             messages.error(request, "Passwords do not match")
             return redirect("signup")
-        # !! keep things seperated too much in one try: broke the signup keep the logic seperate
         try:
             user = User.objects.create_user(username, email, password)
             user.save()
@@ -660,7 +657,7 @@ def user_signup(request):
             messages.error(request, f"Error creating account: {e}")
             return redirect("signup")
 
-        # fixed the issue of login() breaking down bc multiple authications so it was confused
+        # Re-authenticate so login() picks the right backend (allauth adds a second one).
         auth_user = authenticate(request, username=username, password=password)
         if auth_user is None:
             messages.info(request, "Account created. Please log in.")
