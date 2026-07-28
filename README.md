@@ -5,6 +5,7 @@
 <p align="center">
   <img src="NoteTube.png" alt="Architecture Diagram" width="800"/>
 </p>
+<p align="center"><em>Request flow from nginx through Django, the Celery workers, and the gRPC content-service, down to Postgres/pgvector and Redis.</em></p>
 
 An AI-powered web app that turns YouTube videos and audio recordings into organized, structured notes — with semantic search, async processing, and Notion export.
 
