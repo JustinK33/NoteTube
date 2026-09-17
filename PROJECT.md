@@ -1,6 +1,6 @@
 # NoteTube
 
-> AI-powered note generation from YouTube videos and audio files — with semantic search, async processing, and Notion export.
+> AI-powered note generation from YouTube videos and audio files - with semantic search, async processing, and Notion export.
 
 ---
 
@@ -52,6 +52,11 @@ NoteTube turns YouTube videos and MP3 recordings into structured, exam-ready not
         └─────────────────┘
 ```
 
+<p align="center">
+  <img src="docs/NoteTube.png" alt="NoteTube system architecture" width="800"/>
+</p>
+<p align="center"><em>The same layout drawn out: nginx to Django, to the Celery workers and the gRPC content-service, down to Postgres/pgvector and Redis. Predates the async search path described below.</em></p>
+
 ---
 
 ## Tech Stack
@@ -61,10 +66,10 @@ NoteTube turns YouTube videos and MP3 recordings into structured, exam-ready not
 | **Language** | Python 3.12 |
 | **Web framework** | Django 6, Django REST Framework |
 | **Task queue** | Celery + Redis (async note generation, MP3, embeddings, Notion) |
-| **gRPC microservice** | Python grpcio — transcript processing pipeline |
+| **gRPC microservice** | Python grpcio - transcript processing pipeline |
 | **AI / LLM** | OpenAI GPT-4.1-nano (notes), text-embedding-3-small (RAG) |
 | **Speech-to-text** | AssemblyAI (MP3 → transcript fallback) |
-| **YouTube** | youtube-transcript-api (captions), yt-dlp (audio download fallback) |
+| **YouTube** | SerpAPI `youtube_transcript` engine (captions), yt-dlp (audio download fallback) |
 | **Vector search** | pgvector + LangChain (semantic note search) |
 | **Cache** | Redis via django-redis (transcript cache, rate limits, RAG semantic cache) |
 | **Auth** | Django allauth + Google OAuth2 |
@@ -97,7 +102,9 @@ NoteTube turns YouTube videos and MP3 recordings into structured, exam-ready not
 | YouTube video → AI notes | ✅ Async (Celery) |
 | MP3 upload → AI notes | ✅ Async (Celery) |
 | Manual note creation | ✅ |
-| Semantic search (RAG) | ✅ pgvector + LangChain + GPT-4o-mini |
+| Semantic search (RAG) | ✅ Async (Celery), pgvector + LangChain + GPT-4o-mini |
+| Self-correcting retrieval | ✅ LLM grades each pass, rewrites and retries up to 2× |
+| Retrieval telemetry | ✅ `RetrievalAttempt` table + `retrieval_stats` command |
 | Vector embeddings on save | ✅ Async (Celery, retries 3×) |
 | Notion page export | ✅ Async (Celery) |
 | TXT / MD / PDF export | ✅ |
@@ -136,9 +143,9 @@ NoteTube turns YouTube videos and MP3 recordings into structured, exam-ready not
 YouTube URL or MP3
        │
        ▼
-  Transcript fetch
-  ├── YouTubeTranscriptApi (native captions, ~1s)
-  └── Fallback: yt-dlp audio download → AssemblyAI STT (~30–90s)
+  Transcript fetch (views.get_transcript)
+  ├── SerpAPI youtube_transcript engine (~1s, fetches from outside our IP)
+  └── Fallback: yt-dlp audio download → AssemblyAI STT (~30-90s)
        │
        ▼
   Transcript cached in Redis (1h TTL)
@@ -157,11 +164,23 @@ YouTube URL or MP3
   Async: OpenAI text-embedding-3-small → pgvector upsert
        │
        ▼
-  RAG retrieval (on search):
+  RAG retrieval (on search, async via note_generator.search_notes):
   ├── User question → embedding → cosine similarity top-5
-  ├── Redis semantic cache (threshold 0.05)
-  └── GPT-4o-mini → answer with citations
+  ├── Grade the retrieved notes: SUFFICIENT or INSUFFICIENT
+  │   ├── INSUFFICIENT → grader also returns a rewritten query
+  │   ├── Re-search with the rewrite and grade again (max 2 retries, 3 passes)
+  │   └── Unparseable grade → treated as sufficient, recorded separately
+  ├── Redis semantic cache (threshold 0.05), shared by grader and answer calls
+  ├── GPT-4o-mini → answer with citations
+  ├── All 3 passes insufficient → caveated answer + low_confidence=True
+  └── One RetrievalAttempt row written per question
 ```
+
+The grader always sees the original question, never a rewrite, so every pass is judged against what the user actually asked.
+
+One caveat on how far this can go: `rag/embed.py` stores one vector per whole `NotePost`, not per transcript chunk.
+A rewritten query can therefore re-rank whole notes but cannot surface a better passage inside a note that was already retrieved.
+If `retrieval_stats` shows retries rarely recovering, chunking is the fix, not a smarter grader.
 
 ---
 
@@ -174,7 +193,8 @@ YouTube URL or MP3
 | `POST` | `/generate-notes` | Enqueue YouTube note task | Yes |
 | `POST` | `/mp3-to-notes` | Enqueue MP3 note task | Yes |
 | `GET` | `/api/task-status/<id>/` | Poll async task result | Yes |
-| `POST` | `/api/notes/search/` | RAG semantic search | Yes |
+| `POST` | `/api/notes/search/` | Enqueue a graded RAG search, returns `202` + `task_id` | Yes |
+| `GET` | `/api/notes/search/<task_id>/` | Poll the search: `pending`, `processing`, `done`, `failed`; `done` carries `answer`, `sources`, `low_confidence` | Yes |
 | `GET` | `/saved-notes` | List all notes (cached 60s) | Yes |
 | `GET` | `/note-details/<pk>/` | View note (cached 300s) | Yes |
 | `GET/POST` | `/note-edit/<pk>/` | Edit note | Yes |
@@ -212,6 +232,24 @@ YouTube URL or MP3
 | `content_hash` | CharField(64) | SHA-256 of content (skip re-embed if unchanged) |
 | `updated_at` | DateTimeField | Auto-updated |
 
+### `RetrievalAttempt`
+
+One row per question asked, written by `note_generator.search_notes`. This table is the measurement, so it is read-only in the admin and a failed write is logged rather than raised, since losing telemetry must never cost a good answer.
+
+| Field | Type | Description |
+|---|---|---|
+| `user` | FK(User), `SET_NULL` | Asker; nulled rather than deleted so the sample does not shrink |
+| `query` | TextField | The question as the user typed it |
+| `attempts` | PositiveSmallInteger | Retrieval passes used, 1 to 3 |
+| `first_grade` | CharField, indexed | `SUFFICIENT` / `INSUFFICIENT` / `UNPARSEABLE`; duplicates `grades[0]` because every stat groups by it |
+| `grades` | JSONField | One grade per pass, e.g. `["INSUFFICIENT", "SUFFICIENT"]` |
+| `rewritten_queries` | JSONField | Rewrites that were actually searched with |
+| `outcome` | CharField, indexed | `sufficient_first_pass` / `sufficient_after_retry` / `exhausted` |
+| `first_doc_count` | PositiveSmallInteger | Notes returned by the first pass |
+| `final_doc_count` | PositiveSmallInteger | Notes the answer was generated from |
+| `latency_ms` | PositiveInteger | Wall clock for the whole loop; includes semantic cache hits, so not raw model cost |
+| `created_at` | DateTimeField, indexed | Auto-set on creation |
+
 ---
 
 ## Deployment
@@ -220,7 +258,7 @@ YouTube URL or MP3
 
 **TLS**: Let's Encrypt certificates auto-renewed every 12 hours via Certbot. nginx polls for a `.renewed` sentinel file and reloads without downtime.
 
-**Static files**: Collected to `/vol/static` by Django (`collectstatic`) and served directly by nginx — bypasses gunicorn entirely.
+**Static files**: Collected to `/vol/static` by Django (`collectstatic`) and served directly by nginx - bypasses gunicorn entirely.
 
 **Database**: External PostgreSQL with `sslmode=require`. pgvector extension enabled for vector similarity search.
 

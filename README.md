@@ -24,8 +24,9 @@ Successful transcripts cache in Redis for an hour and failures for ten minutes, 
 | Web | Django, Django REST Framework, django-allauth, Gunicorn, Tailwind CSS |
 | Async | Celery with a Redis broker |
 | Second service | gRPC and Protocol Buffers (`content-service`) |
-| AI | OpenAI GPT-4.1-nano and text-embedding-3-small, AssemblyAI for speech to text |
+| AI | OpenAI GPT-4.1-nano for note generation, GPT-4o-mini for questions, text-embedding-3-small for vectors, AssemblyAI for speech to text |
 | Retrieval | LangChain, pgvector, PostgreSQL |
+| Retrieval quality | LLM grades every retrieval, rewrites the query and retries up to twice, records the outcome for measurement |
 | Transcripts | SerpAPI, yt-dlp, pytubefix |
 | Export | reportlab for PDF, Notion API |
 | Infra | Docker Compose, nginx, Certbot, AWS EC2, Vercel for the slim frontend |
@@ -33,10 +34,25 @@ Successful transcripts cache in Redis for an hour and failures for ten minutes, 
 
 ## Architecture
 
-<p align="center">
-  <img src="NoteTube.png" alt="NoteTube system architecture" width="800"/>
-</p>
-<p align="center"><em>Request flow from nginx through Django, the Celery workers, and the gRPC content-service, down to Postgres/pgvector and Redis.</em></p>
+```mermaid
+flowchart TD
+    B[Browser] -->|"POST /generate-notes<br>POST /api/notes/search/"| N[nginx]
+    N -->|"HTTP, internal"| D["Django + DRF<br>Gunicorn, 3 workers"]
+    D -->|"202 Accepted, task_id"| B
+    B -->|"GET /api/notes/search/:task_id/"| N
+    D -->|enqueue| R[("Redis<br>broker, cache, semantic cache")]
+    R --> W[Celery worker]
+    W -->|"SerpAPI, then yt-dlp + AssemblyAI"| T[Transcript sources]
+    W -->|"note_generator.generate_note"| G["content-service<br>gRPC, NoteSection"]
+    W -->|"note_generator.search_notes"| L["Grading loop<br>max 3 passes"]
+    L -->|"cosine top-5 on langchain_pg_embedding"| P[("PostgreSQL<br>+ pgvector")]
+    L -->|"grade, rewrite, then answer"| O["OpenAI<br>gpt-4o-mini"]
+    W -->|"NotePost, NoteEmbedding, RetrievalAttempt"| P
+```
+
+Ask a question and Django validates it, hands it to Celery, and answers `202` with a task id in a few milliseconds while the browser starts polling.
+The worker embeds the question, pulls the five nearest notes out of pgvector, and asks the model whether those notes can actually answer it; a verdict of `INSUFFICIENT` comes back with a rewritten query, the search runs again, and that repeats at most twice more.
+Every question writes one `RetrievalAttempt` row with the grades, the rewrites, and the outcome, and if all three passes came back insufficient the answer is still generated but flagged `low_confidence` so the UI can say so rather than presenting a guess as fact.
 
 Six Docker Compose services on one EC2 instance.
 A request comes in over HTTPS, nginx terminates TLS and serves static files itself, and Django hands anything slow to Celery over Redis and returns a task id immediately.
@@ -55,6 +71,8 @@ Redis does triple duty as the Celery broker, the transcript cache, and the RAG s
 
 **Serverless size limits force an honest dependency audit.** Deploying the Django frontend to Vercel meant staying under the 500 MB function limit, which openai plus langchain plus celery plus reportlab blows through easily. `Backend/requirements.txt` is now the slim set that boots Django and serves pages, the heavy note-generation imports sit behind a `try/except ModuleNotFoundError` in `views.py`, and the frontend routes work on a host where the AI routes would not. Splitting them made me notice how much of the install had nothing to do with serving a page.
 
+**A retrieval step with no verdict is a retrieval step with no feedback.** Search used to take whatever pgvector returned and answer from it, so a good answer and a confidently wrong one were indistinguishable from outside the process. Adding a grader that says `SUFFICIENT` or `INSUFFICIENT` and hands back a rewritten query was the small part. The larger part was noticing two things I had been wrong about: search was the last AI path still running inside the HTTP request, and `requirements.txt` pinned nothing, so CI was resolving a different LangChain on every run and a release could have broken `main` with no code change on my side. There is a `retrieval_stats` command and a `RetrievalAttempt` table because a claim about how much this helped is only worth making if I can recompute it from rows, and a grader's opinion of its own retrieval is not the same thing as a verified correct answer.
+
 **Tests that touch Redis aren't tests of my code.** CI kept failing on a missing database and a missing cache connection until I added `testing_settings.py` with an in-memory SQLite database and Django's local-memory cache backend. The suite got faster and stopped depending on whether a service happened to be up.
 
 ## Documentation
@@ -62,6 +80,8 @@ Redis does triple duty as the Celery broker, the transcript cache, and the RAG s
 - [PROJECT.md](PROJECT.md) is the long-form writeup: the full service diagram, the pipeline stage by stage, and the deployment layout.
 - [proto/content_service.proto](proto/content_service.proto) is the gRPC contract between Django and the content-service.
 - [.env.example](.env.example) lists every environment variable with a note on what it's for.
+- `python manage.py retrieval_stats --days 30` reports how often retrieval was graded insufficient and whether a rewritten query recovered it, with raw counts next to every percentage.
+- `python manage.py diagnose_transcript <url>` walks the transcript fallback chain one layer at a time and says which one failed.
 
 ## Quick start
 
