@@ -34,10 +34,9 @@ class NoteSearchView(APIView):
         try:
             # Lazy import: keeps LangChain off the URL-loading path so manage.py
             # commands work without the RAG deps installed.
-            from note_generator.rag.chain import build_user_chain
+            from note_generator.rag.chain import answer_question
 
-            chain = build_user_chain(user_id=request.user.id)
-            result = chain.invoke({"question": query})
+            result = answer_question(user_id=request.user.id, question=query)
         except Exception as e:
             logger.exception(f"RAG chain failed for user {request.user.id}: {e}")
             return Response(

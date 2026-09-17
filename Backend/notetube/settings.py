@@ -238,6 +238,12 @@ RAG_CHAT_MODEL = os.getenv("RAG_CHAT_MODEL", "gpt-4o-mini")
 RAG_COLLECTION_NAME = os.getenv("RAG_COLLECTION_NAME", "notetube_notes")
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "5"))
 RAG_SEMANTIC_CACHE_THRESHOLD = float(os.getenv("RAG_SEMANTIC_CACHE_THRESHOLD", "0.05"))
+# Retries after the first retrieval pass, so 2 means at most 3 passes. Each
+# retry costs one embedding plus one grader call, so this is a cost knob.
+RAG_MAX_RETRIES = int(os.getenv("RAG_MAX_RETRIES", "2"))
+# Embedding on NotePost save. Off in tests, where it otherwise opens real
+# Postgres connections behind a swallowed exception.
+RAG_EMBED_ON_SAVE = True
 
 # PGVector wants a SQLAlchemy-style URL on the psycopg v3 driver.
 # Build it from the same env vars Django already uses for the primary DB.
