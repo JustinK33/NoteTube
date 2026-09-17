@@ -1,9 +1,14 @@
 from django.urls import path
 from . import views
-from .api_views import NoteSearchView
+from .api_views import NoteSearchStatusView, NoteSearchView
 
 urlpatterns = [
     path("api/notes/search/", NoteSearchView.as_view(), name="api-notes-search"),
+    path(
+        "api/notes/search/<str:task_id>/",
+        NoteSearchStatusView.as_view(),
+        name="api-notes-search-status",
+    ),
     path("api/task-status/<str:task_id>/", views.task_status, name="task-status"),
     path("", views.home, name="home"),
     path("index", views.index, name="index"),

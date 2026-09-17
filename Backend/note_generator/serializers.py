@@ -14,3 +14,6 @@ class NoteSearchSourceSerializer(serializers.Serializer):
 class NoteSearchResponseSerializer(serializers.Serializer):
     answer = serializers.CharField()
     sources = NoteSearchSourceSerializer(many=True)
+    # True when every retrieval pass was graded insufficient. The answer is
+    # still real, it just needs to be rendered with the caveat attached.
+    low_confidence = serializers.BooleanField()

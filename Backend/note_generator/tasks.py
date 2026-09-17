@@ -167,6 +167,60 @@ def embed_note_task(self, note_id: int):
         raise self.retry(exc=exc)
 
 
+@shared_task(bind=True, max_retries=0, name="note_generator.search_notes")
+def search_notes_task(self, user_id: int, query: str):
+    """Answer a question over the user's notes, with the grading/retry loop.
+
+    Async because the loop makes up to three retrievals and three grader calls,
+    which is not something to hold a Gunicorn worker for (there are three).
+    """
+    from note_generator.models import RetrievalAttempt
+    from note_generator.rag.chain import answer_question
+
+    try:
+        result = answer_question(user_id=user_id, question=query)
+    except Exception as e:
+        logger.exception(f"search_notes_task: failed for user {user_id}: {e}")
+        return {
+            "answer": None,
+            "sources": [],
+            "low_confidence": False,
+            "error": "Search is temporarily unavailable.",
+            "error_code": "search_failed",
+        }
+
+    # Telemetry is the point of the loop, but it must never cost a good answer.
+    try:
+        RetrievalAttempt.objects.create(
+            user_id=user_id,
+            query=query,
+            attempts=result["attempts"],
+            first_grade=result["grades"][0],
+            grades=result["grades"],
+            rewritten_queries=result["rewritten_queries"],
+            outcome=result["outcome"],
+            first_doc_count=result["first_doc_count"],
+            final_doc_count=result["final_doc_count"],
+            latency_ms=result["latency_ms"],
+        )
+    except Exception as e:
+        logger.warning(f"search_notes_task: could not record RetrievalAttempt: {e}")
+
+    return {
+        "answer": result["answer"],
+        "sources": [
+            {
+                "note_id": d.metadata.get("note_id"),
+                "title": d.metadata.get("title", ""),
+                "source": d.metadata.get("source", ""),
+            }
+            for d in result["docs"]
+        ],
+        "low_confidence": result["low_confidence"],
+        "error": None,
+    }
+
+
 @shared_task(bind=True, max_retries=0, name="note_generator.export_to_notion")
 def export_to_notion_task(self, note_id: int, user_id: int):
     from note_generator.models import NotePost, UserProfile

@@ -31,6 +31,10 @@ MIGRATION_MODULES = DisableMigrations()
 STATICFILES_DIRS = []
 STATIC_ROOT = None
 
+# No PGVector reachable here, and eager Celery would run embedding for real on
+# every NotePost save, fail, and retry three times behind a swallowed exception.
+RAG_EMBED_ON_SAVE = False
+
 # Run tasks synchronously and in-process; no Redis, no worker needed
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = False

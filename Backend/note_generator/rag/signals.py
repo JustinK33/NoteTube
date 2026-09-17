@@ -13,6 +13,7 @@ environments that haven't installed the RAG deps yet.
 
 import logging
 
+from django.conf import settings
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -23,7 +24,13 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=NotePost)
 def _embed_on_note_save(sender, instance: NotePost, **kwargs):
-    # Enqueue async — never block the HTTP response for an OpenAI embeddings call.
+    # Off in tests: eager Celery would otherwise run embed_note() for real on
+    # every NotePost.objects.create(), open a PGVector connection, fail, and
+    # retry three times, all swallowed. Silent, slow, and not testing anything.
+    if not getattr(settings, "RAG_EMBED_ON_SAVE", True):
+        return
+
+    # Enqueue async, never block the HTTP response for an OpenAI embeddings call.
     try:
         from note_generator.tasks import embed_note_task
 
