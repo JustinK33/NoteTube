@@ -2,7 +2,7 @@ django
 psycopg[binary]
 dotenv
 assemblyai
-openai
+openai==3.14.1
 django-allauth
 requests
 pyjwt
@@ -19,10 +19,12 @@ fastapi.responses
 grpcio
 protobuf
 djangorestframework
-langchain-core
-langchain-openai
-langchain-postgres
-langchain-redis
-pgvector
-tiktoken
+# Pinned: CI resolved whatever was newest on every run, so a LangChain release
+# could break main with no code change. Bump these deliberately.
+langchain-core==1.6.3
+langchain-openai==1.6.2
+langchain-postgres==0.0.18
+langchain-redis==0.2.5
+pgvector==0.3.6
+tiktoken==0.14.0
 celery[redis]
