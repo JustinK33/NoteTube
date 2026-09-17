@@ -35,6 +35,11 @@ STATIC_ROOT = None
 # every NotePost save, fail, and retry three times behind a swallowed exception.
 RAG_EMBED_ON_SAVE = False
 
+# settings.py calls load_dotenv(), so a developer's real REDIS_URL leaks into the
+# test run and RedisSemanticCache would open a live connection plus an OpenAI
+# embeddings call. Empty makes _configure_semantic_cache_once a no-op.
+REDIS_URL = ""
+
 # Run tasks synchronously and in-process; no Redis, no worker needed
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = False
