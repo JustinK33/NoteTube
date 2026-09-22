@@ -61,19 +61,17 @@ Redis does triple duty as the Celery broker, the transcript cache, and the RAG s
 
 ## What building this taught me
 
-**Your IP address is part of your architecture.** Everything worked locally and then broke on EC2, because YouTube blocks datacenter ranges. I spent a while treating this as a bug in my code before accepting it was a property of where the code ran. The fix wasn't one fix: a `TranscriptFetchError` hierarchy that carries an `error_code` and an `http_status`, a SerpAPI path that fetches transcripts from outside my IP, a yt-dlp plus AssemblyAI fallback that pays money instead of getting blocked, and a `diagnose_transcript` management command so I could tell which layer was failing in production without reading logs by hand.
+**Your IP address is part of your architecture.**
+Everything worked locally and broke on EC2 because YouTube blocks datacenter ranges, and I spent a while treating that as a bug in my code before accepting it was a property of where the code ran.
+The fix was a whole fallback chain instead of one change: a typed error hierarchy, a SerpAPI path that fetches from outside my IP, a yt-dlp plus AssemblyAI path that pays money rather than getting blocked, and a `diagnose_transcript` command that says which layer failed.
 
-**Caching the failures mattered more than caching the successes.** Successful transcripts cache for an hour, failed ones for ten minutes. Without the failure cache, a user hammering retry on a blocked video generated a fresh outbound request every time, which is the exact traffic pattern that gets you blocked harder.
+**Caching the failures mattered more than caching the successes.**
+Successful transcripts cache for an hour and failed ones for ten minutes.
+Without the failure cache, a user hammering retry on a blocked video generated a fresh outbound request every time, which is the exact pattern that gets you blocked harder.
 
-**A 500 for "YouTube blocked us" teaches the user nothing.** The generate endpoint now returns 502 with a structured code, and the frontend turns that into a suggestion to upload the MP3. Same failure, but it's now an instruction instead of a dead end.
-
-**I split the monolith for latency and got a typed contract as the better prize.** The `content-service` moved out to its own gRPC service so chunking wouldn't block a Gunicorn worker. What actually paid off was `proto/content_service.proto`: the boundary between Django and the chunker is a schema both sides compile against, so a shape change is a build error rather than a `KeyError` in a Celery task at 2am.
-
-**Serverless size limits force an honest dependency audit.** Deploying the Django frontend to Vercel meant staying under the 500 MB function limit, which openai plus langchain plus celery plus reportlab blows through easily. `Backend/requirements.txt` is now the slim set that boots Django and serves pages, the heavy note-generation imports sit behind a `try/except ModuleNotFoundError` in `views.py`, and the frontend routes work on a host where the AI routes would not. Splitting them made me notice how much of the install had nothing to do with serving a page.
-
-**A retrieval step with no verdict is a retrieval step with no feedback.** Search used to take whatever pgvector returned and answer from it, so a good answer and a confidently wrong one were indistinguishable from outside the process. Adding a grader that says `SUFFICIENT` or `INSUFFICIENT` and hands back a rewritten query was the small part. The larger part was noticing two things I had been wrong about: search was the last AI path still running inside the HTTP request, and `requirements.txt` pinned nothing, so CI was resolving a different LangChain on every run and a release could have broken `main` with no code change on my side. There is a `retrieval_stats` command and a `RetrievalAttempt` table because a claim about how much this helped is only worth making if I can recompute it from rows, and a grader's opinion of its own retrieval is not the same thing as a verified correct answer.
-
-**Tests that touch Redis aren't tests of my code.** CI kept failing on a missing database and a missing cache connection until I added `testing_settings.py` with an in-memory SQLite database and Django's local-memory cache backend. The suite got faster and stopped depending on whether a service happened to be up.
+**Splitting a service for latency paid off as a typed contract instead.**
+`content-service` moved out to gRPC so chunking would not block a Gunicorn worker, and the real prize was `proto/content_service.proto`.
+The boundary between Django and the chunker is now a schema both sides compile against, so a shape change is a build error rather than a `KeyError` in a Celery task at 2am.
 
 ## Documentation
 
