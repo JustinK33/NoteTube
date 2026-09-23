@@ -101,3 +101,7 @@ Tests run against SQLite in memory, so they need no services up:
 pip install -r requirements-dev.txt
 pytest tests/ --cov=Backend/note_generator
 ```
+
+## License
+
+MIT, see LICENSE.
